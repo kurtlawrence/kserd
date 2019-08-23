@@ -3,6 +3,17 @@ name = "kserd"
 version = "0.1.0"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
 edition = "2018"
+description = "Kurt's Self-Explanatory Rust Data"
+documentation = "https://docs.rs/kserd/"
+homepage = "https://github.com/kurtlawrence/kserd"
+repository = "https://github.com/kurtlawrence/kserd"
+readme = "README.md"
+categories = [ "data-structures", "encoding", "parsing" ]
+license = "MIT"
+
+[badges]
+travis-ci = { repository = "kurtlawrence/kserd" }
+codecov = { repository = "kurtlawrence/kserd" }
 
 [dependencies]
 base91 =    { version = "0.0.1",    optional = true,	default-features = false }
