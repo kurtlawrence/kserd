@@ -33,7 +33,7 @@
 //!                Value::new_cntr(vec![
 //!                     ("name", Kserd::new_str("a-crate")),
 //!                     ("version", Kserd::new_str("0.1.0")),
-//!                 ]),
+//!                 ]).unwrap(),
 //!             )
 //!             .unwrap(),
 //!         ),
@@ -43,14 +43,14 @@
 //!                 Kserd::new_cntr(vec![
 //!                     ("name", Kserd::new_str("serde")),
 //!                     ("version", Kserd::new_str("1")),
-//!                 ]),
+//!                 ]).unwrap(),
 //!                 Kserd::new_cntr(vec![
 //!                     ("name", Kserd::new_str("rand")),
 //!                     ("version", Kserd::new_str("0.5")),
-//!                 ]),
+//!                 ]).unwrap(),
 //!             ])),
 //!         ),
-//!     ]),
+//!     ]).unwrap(),
 //! )
 //! .unwrap();
 //!
@@ -123,7 +123,7 @@
 //!     version = "0.5"
 //! package = Package (name = "a-crate", version = "0.1.0")
 //! "#
-//! );        
+//! );
 //! ```
 //!
 //! [`.as_str()`]: crate::Kserd::as_str

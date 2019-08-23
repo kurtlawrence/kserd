@@ -446,7 +446,6 @@ impl fmt::Display for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::*;
     use serde::Deserialize;
 
     #[test]

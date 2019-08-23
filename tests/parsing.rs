@@ -46,10 +46,7 @@ fn as_kserd<T: Serialize>(val: &T) -> Kserd<'static> {
     Kserd::enc(val).unwrap()
 }
 
-mod misc {
-    use super::*;
-
-}
+mod misc {}
 
 mod prims {
     use super::*;
@@ -522,8 +519,6 @@ mod seq {
 
     #[test]
     fn test_seq_inline() {
-        let ans = as_kserd(&vec![-5, -2, -1, 0, 1, 2, 5]);
-
         do_test!(
             "[-5,-2,-1,0,1,2,5]",
             &Kserd::new(Value::Seq(vec![

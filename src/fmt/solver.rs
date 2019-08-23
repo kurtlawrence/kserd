@@ -585,7 +585,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut fmtr = Formatter::new(&kserd);
+        let fmtr = Formatter::new(&kserd);
 
         let inline_widths = solver::inline_widths(&fmtr.root(), &config);
 

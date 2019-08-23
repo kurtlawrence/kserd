@@ -2,7 +2,7 @@
 extern crate serde_derive;
 
 use kserd::*;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct UnitStruct;

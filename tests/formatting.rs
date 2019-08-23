@@ -13,7 +13,6 @@ where
     K: Serialize + 'a,
     V: Serialize + 'a,
 {
-    use kserd::encode::Encoder;
     i.map(|(k, v)| (Kserd::enc(&k).unwrap(), Kserd::enc(&v).unwrap()))
 }
 
