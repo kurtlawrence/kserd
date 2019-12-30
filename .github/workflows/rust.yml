@@ -1,0 +1,83 @@
+name: Rust Tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+  schedule:
+    - cron: '00 07 * * 0'
+
+jobs:
+  run-tests:
+    strategy:
+      matrix:
+        name: [default-features, no-features, all-features, format, encode, parse]
+        os: [ubuntu-latest, windows-latest]
+        rust: [nightly, stable, 1.36.0]
+        include:
+          - name: default-features
+            cmd: cargo test
+          - name: no-features
+            cmd: cargo test --no-default-features
+          - name: all-features
+            cmd: cargo test --all-features
+          - name: format
+            cmd: cargo test --no-default-features --features="format"
+          - name: encode
+            cmd: cargo test --no-default-features --features="encode"
+          - name: parse
+            cmd: cargo test --no-default-features --features="parse"
+               
+    name: ${{ matrix.name }} with ${{ matrix.rust }} on ${{ matrix.os }}
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ matrix.rust }}
+        override: true
+        
+    - name: Cache cargo registry
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+        
+    - name: Cache cargo index
+      uses: actions/cache@v1
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}
+      
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ matrix.rust }}-cargo-build-target-${{ hashFiles('**/Cargo.toml') }}
+           
+    - name: Run tests
+      run: ${{ matrix.cmd }}
+      
+  format-check:
+    name: format-check
+    runs-on: [ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2      
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt -- --check
