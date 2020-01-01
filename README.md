@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/kurtlawrence/kserd.svg?branch=master)](https://travis-ci.com/kurtlawrence/kserd)
+[![Build Status](https://github.com/kurtlawrence/kserd/workflows/Rust/badge.svg)](https://github.com/kurtlawrence/kserd/actions)
 [![Latest Version](https://img.shields.io/crates/v/kserd.svg)](https://crates.io/crates/kserd)
 [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/kserd)
 [![codecov](https://codecov.io/gh/kurtlawrence/kserd/branch/master/graph/badge.svg)](https://codecov.io/gh/kurtlawrence/kserd)
