@@ -85,24 +85,20 @@ pub trait ToKserd<'a> {
     fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr>;
 }
 
-/// Errors that can occur when use [`ToKserd`](ToKserd).
+/// Errors that can occur when using [`ToKserd`](ToKserd).
 #[derive(Debug, PartialEq)]
 pub enum ToKserdErr {
     /// The identity contained invalid characters.
-    InvalidId(String),
+    InvalidId,
 }
 
 impl error::Error for ToKserdErr {}
 
 impl fmt::Display for ToKserdErr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl From<String> for ToKserdErr {
-    fn from(err: String) -> Self {
-        ToKserdErr::InvalidId(err)
+        match self {
+            ToKserdErr::InvalidId => write!(f, "the identity contained invalid characters"),
+        }
     }
 }
 
