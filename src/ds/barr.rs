@@ -16,7 +16,7 @@ pub struct Barr<'a> {
 
 impl<'a> Barr<'a> {
     /// A new _borrowed_ byte array. `Barr` has the same lifetime as the borrowed data.
-    pub fn brwed(bytes: &'a [u8]) -> Self {
+    pub const fn brwed(bytes: &'a [u8]) -> Self {
         Self {
             inner: Cow::Borrowed(bytes),
         }
@@ -24,7 +24,7 @@ impl<'a> Barr<'a> {
 
     /// A new _owned_ byte array. Takes ownership of the vector of bytes and has a `'static`
     /// lifetime.
-    pub fn owned(bytes: Vec<u8>) -> Barr<'static> {
+    pub const fn owned(bytes: Vec<u8>) -> Barr<'static> {
         Barr {
             inner: Cow::Owned(bytes),
         }
@@ -105,6 +105,18 @@ impl<'a> Debug for Barr<'a> {
     }
 }
 
+impl<'a> PartialEq<[u8]> for Barr<'a> {
+    fn eq(&self, other: &[u8]) -> bool {
+        self.as_ref() == other
+    }
+}
+
+impl<'a> PartialEq<[u8]> for &Barr<'a> {
+    fn eq(&self, other: &[u8]) -> bool {
+        self.as_ref() == other
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,5 +135,27 @@ mod tests {
         let two = Barr::brwed(b"Hello, world!");
 
         assert_eq!(set.contains(&two), true);
+    }
+
+    #[test]
+    fn test_to_mut() {
+        let mut x: Barr = b"Hello"[..].into();
+        assert_eq!(&x, &b"Hello"[..]);
+        x.to_mut().extend(b", world!".iter());
+        assert_eq!(&x, b"Hello, world!"[..]);
+    }
+
+    #[test]
+    fn test_as_ref() {
+        let x = Barr::brwed(b"Hello, world!");
+        assert_eq!(x.as_ref(), &b"Hello, world!"[..]);
+    }
+
+    #[test]
+    fn fmt_test() {
+        let x = Barr::brwed(&[100]);
+        assert_eq!(&format!("{:?}", x), "[100]");
+        let x = Barr::owned(vec![100]);
+        assert_eq!(&format!("{:?}", x), "[100]");
     }
 }
