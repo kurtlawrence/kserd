@@ -339,10 +339,38 @@ where
     }
 }
 
+/// Blanket implementation for `Option<T>`.
+///
+/// The implementation _does not wrap `Some` values_. Rather, if there is something, it is just
+/// that value, or it will be an empty tuple with the name `None`.
+///
+/// ```rust
+/// let option = Some(String::from("Hello, world!"));
+/// assert_eq!(option.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
+/// let option: Option<String> = None;
+/// assert_eq!(option.into_kserd(), Kserd::with_id("None", Value::Tuple(vec![])).map_err(From::from));
+/// ```
+impl<'a, T> ToKserd<'a> for Option<T>
+where
+    T: ToKserd<'a>
+{
+    fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
+        match self {
+            Some(x) => x.into_kserd(),
+            None => Ok(Kserd::with_id_unchk("None", Value::Tuple(Vec::new()))),
+        }
+    }
+}
+
 #[test]
 fn blanket_impls_tests() {
     let boxed = Box::new(String::from("Hello, world!"));
     assert_eq!(boxed.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
+
+    let option = Some(String::from("Hello, world!"));
+    assert_eq!(option.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
+    let option: Option<String> = None;
+    assert_eq!(option.into_kserd(), Kserd::with_id("None", Value::Tuple(vec![])).map_err(From::from));
 
 }
 
