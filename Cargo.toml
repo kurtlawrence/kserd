@@ -24,3 +24,4 @@ parse =     [ "base91", "nom" ]
 
 [dev-dependencies]
 serde_derive = "1"
+rand = "0.7"
