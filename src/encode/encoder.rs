@@ -225,8 +225,7 @@ impl ser::Serializer for Encoder {
         _: usize,
     ) -> Result<CntrLike, Error> {
         Ok(CntrLike {
-            kserd: Kserd::with_id(variant, Value::Cntr(Fields::new()))
-                .map_err(Error::InvalidId)?,
+            kserd: Kserd::with_id(variant, Value::Cntr(Fields::new())).map_err(Error::InvalidId)?,
         })
     }
 

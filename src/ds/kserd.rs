@@ -1,7 +1,7 @@
 use super::*;
 use std::{
+    error, fmt,
     ops::{Deref, DerefMut},
-    fmt, error,
 };
 
 /// The atomic value.

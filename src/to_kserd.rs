@@ -1,4 +1,7 @@
-use crate::{Kserd, Value, ds::{InvalidId, InvalidFieldName}};
+use crate::{
+    ds::{InvalidFieldName, InvalidId},
+    Kserd, Value,
+};
 use std::{error, fmt};
 
 /// _Convert_ something into a `Kserd`.
@@ -338,7 +341,7 @@ impl<'a, T: ToKserd<'a>> ToKserd<'a> for Vec<T> {
 
 impl<'a, T> ToKserd<'a> for Box<T>
 where
-    T: ToKserd<'a>
+    T: ToKserd<'a>,
 {
     fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
         (*self).into_kserd()
@@ -359,13 +362,26 @@ where
 /// ```
 impl<'a, T> ToKserd<'a> for Option<T>
 where
-    T: ToKserd<'a>
+    T: ToKserd<'a>,
 {
     fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
         match self {
             Some(x) => x.into_kserd(),
             None => Ok(Kserd::with_id_unchk("None", Value::Tuple(Vec::new()))),
         }
+    }
+}
+
+impl<'kserd, 't: 'kserd, 'e: 'kserd, T, E> ToKserd<'kserd> for Result<T, E>
+where
+    T: ToKserd<'t>,
+    E: ToKserd<'e>,
+{
+    fn into_kserd(self) -> Result<Kserd<'kserd>, ToKserdErr> {
+        Ok(match self {
+            Ok(x) => Kserd::with_id_unchk("Ok", Value::Tuple(vec![x.into_kserd()?])),
+            Err(x) => Kserd::with_id_unchk("Err", Value::Tuple(vec![x.into_kserd()?])),
+        })
     }
 }
 
@@ -377,8 +393,21 @@ fn blanket_impls_tests() {
     let option = Some(String::from("Hello, world!"));
     assert_eq!(option.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
     let option: Option<String> = None;
-    assert_eq!(option.into_kserd(), Kserd::with_id("None", Value::Tuple(vec![])).map_err(From::from));
+    assert_eq!(
+        option.into_kserd(),
+        Kserd::with_id("None", Value::Tuple(vec![])).map_err(From::from)
+    );
 
+    let ok: Result<String, String> = Ok(String::from("I am okay!"));
+    assert_eq!(
+        ok.into_kserd(),
+        Ok(Kserd::new(Value::Tuple(vec![Kserd::new_str("I am okay!")])))
+    );
+    let err: Result<String, String> = Err(String::from("I am not!"));
+    assert_eq!(
+        err.into_kserd(),
+        Ok(Kserd::new(Value::Tuple(vec![Kserd::new_str("I am not!")])))
+    );
 }
 
 // ********************* STRINGS AND BYTE ARRAYS ******************************

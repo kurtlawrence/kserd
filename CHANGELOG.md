@@ -5,3 +5,4 @@
 - Implement `ToKserd` for tuples up to 12 length
 - Implement `ToKserd` for `Box<T>`
 - Implement `ToKserd` for `Option<T>`
+- Implement `ToKserd` for `Result<T, E>`
