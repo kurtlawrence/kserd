@@ -619,5 +619,4 @@ mod tests {
         assert_eq!(f(1), 4); //     1234:
         assert_eq!(f(2), 10); //          123456
     }
-
 }

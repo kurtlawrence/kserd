@@ -161,5 +161,4 @@ mod tests {
         fmtr.inline(0).unwrap(); // inline
         assert_eq!(&fmtr.write_string(String::new()), "[]");
     }
-
 }

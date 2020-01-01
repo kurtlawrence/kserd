@@ -123,7 +123,7 @@
 //!     version = "0.5"
 //! package = Package (name = "a-crate", version = "0.1.0")
 //! "#
-//! );        
+//! );
 //! ```
 //!
 //! [`.as_str()`]: crate::Kserd::as_str
