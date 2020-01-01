@@ -30,7 +30,7 @@ jobs:
       - name: Install tarpaulin
         run: |
           sudo apt-get install libssl-dev
-          cargo install cargo-tarpaulin
+          cargo install cargo-tarpaulin || cargo install cargo-tarpaulin --force
           
       - name: Generate and Upload Coverage
         env:
