@@ -1,4 +1,7 @@
-use crate::{Kserd, Value};
+use crate::{
+    ds::{InvalidFieldName, InvalidId},
+    Kserd, Value,
+};
 use std::{error, fmt};
 
 /// _Convert_ something into a `Kserd`.
@@ -85,24 +88,23 @@ pub trait ToKserd<'a> {
     fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr>;
 }
 
-/// Errors that can occur when use [`ToKserd`](ToKserd).
-#[derive(Debug, PartialEq)]
+/// Errors that can occur when using [`ToKserd`](ToKserd).
+#[derive(Debug, PartialEq, Clone)]
 pub enum ToKserdErr {
     /// The identity contained invalid characters.
-    InvalidId(String),
+    InvalidId(InvalidId),
+    /// A container's field name contained invalid characters.
+    InvalidFieldName(InvalidFieldName),
 }
 
 impl error::Error for ToKserdErr {}
 
 impl fmt::Display for ToKserdErr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl From<String> for ToKserdErr {
-    fn from(err: String) -> Self {
-        ToKserdErr::InvalidId(err)
+        match self {
+            ToKserdErr::InvalidId(s) => write!(f, "{}", s),
+            ToKserdErr::InvalidFieldName(s) => write!(f, "{}", s),
+        }
     }
 }
 
@@ -110,6 +112,40 @@ impl<'a> ToKserd<'a> for Kserd<'a> {
     fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
         Ok(self)
     }
+}
+
+impl From<InvalidId> for ToKserdErr {
+    fn from(id: InvalidId) -> ToKserdErr {
+        ToKserdErr::InvalidId(id)
+    }
+}
+
+impl From<InvalidFieldName> for ToKserdErr {
+    fn from(x: InvalidFieldName) -> ToKserdErr {
+        ToKserdErr::InvalidFieldName(x)
+    }
+}
+
+#[cfg(test)]
+use rand::{random, thread_rng, Rng};
+#[cfg(test)]
+fn random_string() -> String {
+    let mut rng = rand::thread_rng();
+    let len = rng.gen::<u8>() as usize;
+    let mut s = String::new();
+    for _ in 0..len {
+        s.push(rng.gen());
+    }
+    s
+}
+
+#[test]
+fn test_kserd_to_kserd() {
+    let kserd = (random_string(), rand::random::<usize>())
+        .into_kserd()
+        .unwrap();
+    let kserdnew = kserd.clone().into_kserd().unwrap();
+    assert_eq!(kserd, kserdnew);
 }
 
 // ********************* COPY-ABLE PRIMITIVES *********************************
@@ -153,6 +189,16 @@ impl ToKserd<'static> for char {
     }
 }
 
+#[test]
+fn test_copyable_primitives() {
+    assert_eq!(123456.into_kserd(), Ok(Kserd::new_num(123456)));
+    assert_eq!((-1234567).into_kserd(), Ok(Kserd::new_num(-1234567)));
+    assert_eq!(3.14.into_kserd(), Ok(Kserd::new_num(3.14)));
+    assert_eq!(().into_kserd(), Ok(Kserd::new_unit()));
+    assert_eq!(true.into_kserd(), Ok(Kserd::new_bool(true)));
+    assert_eq!('y'.into_kserd(), Ok(Kserd::new_str("y")));
+}
+
 // ********************* STRINGS AND BYTE ARRAYS ******************************
 
 impl ToKserd<'static> for String {
@@ -167,22 +213,45 @@ impl<'a> ToKserd<'a> for &'a str {
     }
 }
 
+#[test]
+fn test_strings() {
+    let s = random_string();
+    assert_eq!(s.as_str().into_kserd(), Ok(Kserd::new_str(&s)));
+    assert_eq!(s.clone().into_kserd(), Ok(Kserd::new_string(s)));
+}
+
 // ********************* TUPLES AND ARRAYS ************************************
 
-impl<'a, A: ToKserd<'a>> ToKserd<'a> for (A,) {
-    fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
-        Ok(Kserd::new(Value::Tuple(vec![self.0.into_kserd()?])))
+macro_rules! tuples {
+    ( $( $lifetime:tt|$element:tt|$idx:tt ),+ ) => {
+        impl<'kserd, $($lifetime: 'kserd,)* $($element,)*> ToKserd<'kserd> for ($($element,)*)
+        where
+            $(
+                $element: ToKserd<$lifetime>,
+            )*
+        {
+            fn into_kserd(self) -> Result<Kserd<'kserd>, ToKserdErr> {
+                let v = vec![$(
+                    self.$idx.into_kserd()?,
+                )*];
+                Ok(Kserd::new(Value::Tuple(v)))
+            }
+        }
     }
 }
 
-impl<'a, A: ToKserd<'a>, B: ToKserd<'a>> ToKserd<'a> for (A, B) {
-    fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
-        Ok(Kserd::new(Value::Tuple(vec![
-            self.0.into_kserd()?,
-            self.1.into_kserd()?,
-        ])))
-    }
-}
+tuples!('a|A|0);
+tuples!('a|A|0,'b|B|1);
+tuples!('a|A|0,'b|B|1,'c|C|2);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4, 'f|F|5);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4, 'f|F|5, 'g|G|6);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4, 'f|F|5, 'g|G|6, 'h|H|7);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4, 'f|F|5, 'g|G|6, 'h|H|7, 'i|I|8);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4, 'f|F|5, 'g|G|6, 'h|H|7, 'i|I|8, 'j|J|9);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4, 'f|F|5, 'g|G|6, 'h|H|7, 'i|I|8, 'j|J|9, 'k|K|10);
+tuples!('a|A|0,'b|B|1,'c|C|2, 'd|D|3, 'e|E|4, 'f|F|5, 'g|G|6, 'h|H|7, 'i|I|8, 'j|J|9, 'k|K|10, 'l|L|11);
 
 macro_rules! array {
     ( $( $x:literal ) * ) => {
@@ -209,6 +278,53 @@ array!(
     25 26 27 28 29 30 31 32
 );
 
+#[test]
+fn tuples_and_array_test() {
+    let mut rng = thread_rng();
+
+    macro_rules! tester {
+        (arrays $( $size:literal ) * ) => {{
+            $(
+            let mut arr = [0u8; $size];
+            rng.fill(&mut arr[..]);
+            let v = arr.iter().copied().collect::<Vec<_>>();
+            assert_eq!(arr.into_kserd(), v.into_kserd());
+            )*
+        }};
+        (tuples $tuple:expr => $($idx:tt),*) => {{
+            let tuple = $tuple;
+            let kserd = tuple.clone().into_kserd().unwrap();
+            let vec = match kserd.val {
+                Value::Tuple(v) => v,
+                _ => unreachable!("should be a tuple")
+            };
+            $(
+                assert_eq!(tuple.$idx.clone().into_kserd().unwrap(), vec[$idx]);
+            )*
+        }}
+    };
+
+    tester!(arrays
+         1  2  3  4  5  6  7  8
+         9 10 11 12 13 14 15 16
+        17 18 19 20 21 22 23 24
+        25 26 27 28 29 30 31 32
+    );
+
+    tester!(tuples (random_string(),) => 0);
+    tester!(tuples (random_string(), rng.gen::<usize>()) => 0,1);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string()) => 0,1,2);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>()) => 0,1,2,3);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string()) => 0,1,2,3,4);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string()) => 0,1,2,3,4,5);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>()) => 0,1,2,3,4,5,6);
+    tester!(tuples (random_string(), random::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>()) => 0,1,2,3,4,5,6,7);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>()) => 0,1,2,3,4,5,6,7,8);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>(), rng.gen::<f64>()) => 0,1,2,3,4,5,6,7,8,9);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>(), rng.gen::<f64>(), random_string()) => 0,1,2,3,4,5,6,7,8,9,10);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>(), rng.gen::<f64>(), random_string(), random_string()) => 0,1,2,3,4,5,6,7,8,9,10,11);
+}
+
 // ********************* SEQUENCES AND MAPS ***********************************
 
 impl<'a, T: ToKserd<'a>> ToKserd<'a> for Vec<T> {
@@ -221,7 +337,79 @@ impl<'a, T: ToKserd<'a>> ToKserd<'a> for Vec<T> {
     }
 }
 
-// ********************* STRINGS AND BYTE ARRAYS ******************************
+// ********************* BLANKET IMPLEMENTATIONS ******************************
+
+impl<'a, T> ToKserd<'a> for Box<T>
+where
+    T: ToKserd<'a>,
+{
+    fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
+        (*self).into_kserd()
+    }
+}
+
+/// Blanket implementation for `Option<T>`.
+///
+/// The implementation _does not wrap `Some` values_. Rather, if there is something, it is just
+/// that value, or it will be an empty tuple with the name `None`.
+///
+/// ```rust
+/// # use kserd::*;
+/// let option = Some(String::from("Hello, world!"));
+/// assert_eq!(option.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
+/// let option: Option<String> = None;
+/// assert_eq!(option.into_kserd(), Kserd::with_id("None", Value::Tuple(vec![])).map_err(From::from));
+/// ```
+impl<'a, T> ToKserd<'a> for Option<T>
+where
+    T: ToKserd<'a>,
+{
+    fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
+        match self {
+            Some(x) => x.into_kserd(),
+            None => Ok(Kserd::with_id_unchk("None", Value::Tuple(Vec::new()))),
+        }
+    }
+}
+
+impl<'kserd, 't: 'kserd, 'e: 'kserd, T, E> ToKserd<'kserd> for Result<T, E>
+where
+    T: ToKserd<'t>,
+    E: ToKserd<'e>,
+{
+    fn into_kserd(self) -> Result<Kserd<'kserd>, ToKserdErr> {
+        Ok(match self {
+            Ok(x) => Kserd::with_id_unchk("Ok", Value::Tuple(vec![x.into_kserd()?])),
+            Err(x) => Kserd::with_id_unchk("Err", Value::Tuple(vec![x.into_kserd()?])),
+        })
+    }
+}
+
+#[test]
+fn blanket_impls_tests() {
+    let boxed = Box::new(String::from("Hello, world!"));
+    assert_eq!(boxed.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
+
+    let option = Some(String::from("Hello, world!"));
+    assert_eq!(option.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
+    let option: Option<String> = None;
+    assert_eq!(
+        option.into_kserd(),
+        Kserd::with_id("None", Value::Tuple(vec![])).map_err(From::from)
+    );
+
+    let ok: Result<String, String> = Ok(String::from("I am okay!"));
+    assert_eq!(
+        ok.into_kserd(),
+        Ok(Kserd::new(Value::Tuple(vec![Kserd::new_str("I am okay!")])))
+    );
+    let err: Result<String, String> = Err(String::from("I am not!"));
+    assert_eq!(
+        err.into_kserd(),
+        Ok(Kserd::new(Value::Tuple(vec![Kserd::new_str("I am not!")])))
+    );
+}
+
 // ********************* STRINGS AND BYTE ARRAYS ******************************
 // ********************* STRINGS AND BYTE ARRAYS ******************************
 // ********************* STRINGS AND BYTE ARRAYS ******************************

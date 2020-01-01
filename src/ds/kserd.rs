@@ -1,6 +1,8 @@
 use super::*;
-use std::fmt;
-use std::ops::{Deref, DerefMut};
+use std::{
+    error, fmt,
+    ops::{Deref, DerefMut},
+};
 
 /// The atomic value.
 ///
@@ -178,15 +180,15 @@ impl<'a> Kserd<'a> {
     ///
     /// [`Value`]: crate::Value
     /// [`Kstr`]: crate::Kstr
-    pub fn with_id<S: Into<Kstr<'a>>>(identity: S, value: Value<'a>) -> Result<Self, String> {
+    pub fn with_id<S: Into<Kstr<'a>>>(identity: S, value: Value<'a>) -> Result<Self, InvalidId> {
         const INVALID: &str = "(){}[]<> ,./\\=";
         let id = identity.into();
 
         if id.chars().any(|c| INVALID.contains(c)) {
-            Err(format!(
+            Err(InvalidId(format!(
                 "identity '{}' contains invalid characters. Invalid characters: '{}'",
                 id, INVALID
-            ))
+            )))
         } else {
             Ok(Self {
                 id: Some(id),
@@ -378,5 +380,17 @@ impl<'a> fmt::Debug for Kserd<'a> {
             .field("id", &Id(self.id()))
             .field("val", &self.val)
             .finish()
+    }
+}
+
+/// The id has invalid characters and would not parse back.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct InvalidId(String);
+
+impl error::Error for InvalidId {}
+
+impl fmt::Display for InvalidId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "id contains invalid characters: {}", self.0)
     }
 }
