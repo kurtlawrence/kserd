@@ -1,3 +1,4 @@
+#![cfg(feature = "encode")]
 use kserd::*;
 
 #[test]

@@ -33,7 +33,7 @@ let cargotoml = Kserd::with_id(
                Value::new_cntr(vec![
                     ("name", Kserd::new_str("a-crate")),
                     ("version", Kserd::new_str("0.1.0")),
-                ]),
+                ]).unwrap(),
             )
             .unwrap(),
         ),
@@ -43,14 +43,14 @@ let cargotoml = Kserd::with_id(
                 Kserd::new_cntr(vec![
                     ("name", Kserd::new_str("serde")),
                     ("version", Kserd::new_str("1")),
-                ]),
+                ]).unwrap(),
                 Kserd::new_cntr(vec![
                     ("name", Kserd::new_str("rand")),
                     ("version", Kserd::new_str("0.5")),
-                ]),
+                ]).unwrap(),
             ])),
         ),
-    ]),
+    ]).unwrap(),
 )
 .unwrap();
 

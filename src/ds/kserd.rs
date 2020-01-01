@@ -54,7 +54,7 @@ pub struct Kserd<'a> {
 
 /// Static lifetime constructors. These do not need a [`Serialize`] trait.
 ///
-/// [`Serialize`]: crate::Serialize
+/// [`Serialize`]: crate::encode::Serialize
 impl Kserd<'static> {
     /// A new unit value `()`.
     ///
@@ -134,7 +134,7 @@ impl Kserd<'static> {
 
 /// General lifetime contructors. These _do not need_ a [`Serialize`] trait.
 ///
-/// [`Serialize`]: crate::Serialize
+/// [`Serialize`]: crate::encode::Serialize
 impl<'a> Kserd<'a> {
     /// A new `Kserd` with the specified [`Value`].
     /// No identity is ascribed to the `Kserd`.
@@ -323,7 +323,7 @@ impl<'a> Kserd<'a> {
     /// assert_eq!(kserd, brwed);
     /// ```
     ///
-    /// [`Decoder`]: encode::Decoder
+    /// [`Decoder`]: crate::encode::Decoder
     pub fn mk_brw<'b>(&'b self) -> Kserd<'b> {
         let id = self.id().map(Kstr::brwed);
         let val = self.val.mk_brw();

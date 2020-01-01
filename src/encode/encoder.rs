@@ -51,8 +51,8 @@ type Res = Result<Kserd<'static>, Error>;
 /// [`Decoder`]: crate::encode::Decoder
 /// [`Kserd`]: crate::Kserd
 /// [`Kserd::enc`]: crate::Kserd::enc
-/// [`Serialize`]: crate::Serialize
-/// [`Serialize::serialize`]: crate::Serialize::serialize
+/// [`Serialize`]: crate::encode::Serialize
+/// [`Serialize::serialize`]: crate::encode::Serialize::serialize
 /// [`ToKserd`]: crate::ToKserd
 pub struct Encoder;
 
