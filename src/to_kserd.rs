@@ -303,17 +303,17 @@ fn tuples_and_array_test() {
     );
 
     tester!(tuples (random_string(),) => 0);
-    tester!(tuples (random_string(), random::<usize>()) => 0,1);
-    tester!(tuples (random_string(), random::<usize>(), random_string()) => 0,1,2);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>()) => 0,1,2,3);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string()) => 0,1,2,3,4);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string(), random_string()) => 0,1,2,3,4,5);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string(), random_string(), random::<isize>()) => 0,1,2,3,4,5,6);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string(), random_string(), random::<isize>(), random::<bool>()) => 0,1,2,3,4,5,6,7);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string(), random_string(), random::<isize>(), random::<bool>(), random::<char>()) => 0,1,2,3,4,5,6,7,8);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string(), random_string(), random::<isize>(), random::<bool>(), random::<char>(), random::<f64>()) => 0,1,2,3,4,5,6,7,8,9);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string(), random_string(), random::<isize>(), random::<bool>(), random::<char>(), random::<f64>(), random_string()) => 0,1,2,3,4,5,6,7,8,9,10);
-    tester!(tuples (random_string(), random::<usize>(), random_string(), random::<char>(), random_string(), random_string(), random::<isize>(), random::<bool>(), random::<char>(), random::<f64>(), random_string(), random_string()) => 0,1,2,3,4,5,6,7,8,9,10,11);
+    tester!(tuples (random_string(), rng.gen::<usize>()) => 0,1);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string()) => 0,1,2);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>()) => 0,1,2,3);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string()) => 0,1,2,3,4);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string()) => 0,1,2,3,4,5);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>()) => 0,1,2,3,4,5,6);
+    tester!(tuples (random_string(), random::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>()) => 0,1,2,3,4,5,6,7);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>()) => 0,1,2,3,4,5,6,7,8);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>(), rng.gen::<f64>()) => 0,1,2,3,4,5,6,7,8,9);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>(), rng.gen::<f64>(), random_string()) => 0,1,2,3,4,5,6,7,8,9,10);
+    tester!(tuples (random_string(), rng.gen::<usize>(), random_string(), rng.gen::<char>(), random_string(), random_string(), rng.gen::<isize>(), rng.gen::<bool>(), rng.gen::<char>(), rng.gen::<f64>(), random_string(), random_string()) => 0,1,2,3,4,5,6,7,8,9,10,11);
 }
 
 // ********************* SEQUENCES AND MAPS ***********************************
@@ -328,7 +328,24 @@ impl<'a, T: ToKserd<'a>> ToKserd<'a> for Vec<T> {
     }
 }
 
-// ********************* STRINGS AND BYTE ARRAYS ******************************
+// ********************* BLANKET IMPLEMENTATIONS ******************************
+
+impl<'a, T> ToKserd<'a> for Box<T>
+where
+    T: ToKserd<'a>
+{
+    fn into_kserd(self) -> Result<Kserd<'a>, ToKserdErr> {
+        (*self).into_kserd()
+    }
+}
+
+#[test]
+fn blanket_impls_tests() {
+    let boxed = Box::new(String::from("Hello, world!"));
+    assert_eq!(boxed.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
+
+}
+
 // ********************* STRINGS AND BYTE ARRAYS ******************************
 // ********************* STRINGS AND BYTE ARRAYS ******************************
 // ********************* STRINGS AND BYTE ARRAYS ******************************
