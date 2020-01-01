@@ -150,15 +150,15 @@ impl ser::Serializer for Encoder {
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Res {
-        Kserd::with_id(name, Value::Unit).map_err(Error::InvalidName)
+        Kserd::with_id(name, Value::Unit).map_err(Error::InvalidId)
     }
 
     fn serialize_unit_variant(self, _: &'static str, _: u32, variant: &'static str) -> Res {
-        Kserd::with_id(variant, Value::Unit).map_err(Error::InvalidName)
+        Kserd::with_id(variant, Value::Unit).map_err(Error::InvalidId)
     }
 
     fn serialize_newtype_struct<T: ?Sized + Serialize>(self, name: &'static str, value: &T) -> Res {
-        Kserd::with_id(name, Value::Tuple(vec![value.serialize(self)?])).map_err(Error::InvalidName)
+        Kserd::with_id(name, Value::Tuple(vec![value.serialize(self)?])).map_err(Error::InvalidId)
     }
 
     fn serialize_newtype_variant<T: ?Sized + Serialize>(
@@ -169,7 +169,7 @@ impl ser::Serializer for Encoder {
         value: &T,
     ) -> Res {
         Kserd::with_id(variant, Value::Tuple(vec![value.serialize(self)?]))
-            .map_err(Error::InvalidName)
+            .map_err(Error::InvalidId)
     }
 
     fn serialize_seq(self, len: Option<usize>) -> Result<SeqLike, Error> {
@@ -187,7 +187,7 @@ impl ser::Serializer for Encoder {
     fn serialize_tuple_struct(self, name: &'static str, len: usize) -> Result<TupleLike, Error> {
         Ok(TupleLike {
             kserd: Kserd::with_id(name, Value::Tuple(Vec::with_capacity(len)))
-                .map_err(Error::InvalidName)?,
+                .map_err(Error::InvalidId)?,
         })
     }
 
@@ -200,7 +200,7 @@ impl ser::Serializer for Encoder {
     ) -> Result<TupleLike, Error> {
         Ok(TupleLike {
             kserd: Kserd::with_id(variant, Value::Tuple(Vec::with_capacity(len)))
-                .map_err(Error::InvalidName)?,
+                .map_err(Error::InvalidId)?,
         })
     }
 
@@ -213,7 +213,7 @@ impl ser::Serializer for Encoder {
 
     fn serialize_struct(self, name: &'static str, _len: usize) -> Result<CntrLike, Error> {
         Ok(CntrLike {
-            kserd: Kserd::with_id(name, Value::Cntr(Fields::new())).map_err(Error::InvalidName)?,
+            kserd: Kserd::with_id(name, Value::Cntr(Fields::new())).map_err(Error::InvalidId)?,
         })
     }
 
@@ -226,7 +226,7 @@ impl ser::Serializer for Encoder {
     ) -> Result<CntrLike, Error> {
         Ok(CntrLike {
             kserd: Kserd::with_id(variant, Value::Cntr(Fields::new()))
-                .map_err(Error::InvalidName)?,
+                .map_err(Error::InvalidId)?,
         })
     }
 
@@ -249,7 +249,7 @@ pub enum Error {
     NoKeyAvailable,
     /// The identity string contains invalid characters.
     /// See [`Kserd::with_id`](crate::Kserd::with_id).
-    InvalidName(String),
+    InvalidId(crate::ds::InvalidId),
     /// Some `Serialize` implementor error occurred.
     Message(String),
 }
@@ -268,7 +268,7 @@ impl fmt::Display for Error {
             Error::NoKeyAvailable => {
                 write!(f, "no key was available when trying to serialize map value")
             }
-            Error::InvalidName(s) => write!(f, "name contains invalid characters: {}", s),
+            Error::InvalidId(s) => write!(f, "{}", s),
             Error::Message(s) => write!(f, "custom error: {}", s),
         }
     }

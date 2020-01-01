@@ -6,7 +6,7 @@ mod kstr;
 mod num;
 mod val;
 
-pub use self::kserd::Kserd;
+pub use self::kserd::{InvalidId, Kserd};
 pub use barr::Barr;
 pub use kstr::Kstr;
 pub use num::{IntoIntError, Number, NumberType};

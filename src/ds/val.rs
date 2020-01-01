@@ -1,7 +1,7 @@
 use super::*;
 use crate::Fields;
 use std::borrow::Cow;
-use std::fmt;
+use std::{error, fmt};
 
 /// The value of a [`Kserd`].
 ///
@@ -78,7 +78,7 @@ pub enum Value<'a> {
 }
 
 /// The field name in a container contains invalid characters.
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Eq, Clone)]
 pub struct InvalidFieldName(pub Cow<'static, str>);
 
 impl InvalidFieldName {
@@ -104,7 +104,9 @@ impl InvalidFieldName {
     }
 }
 
-impl fmt::Debug for InvalidFieldName {
+impl error::Error for InvalidFieldName {}
+
+impl fmt::Display for InvalidFieldName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "invalid field name: {}", self.0)
     }

@@ -1,4 +1,4 @@
-use crate::{Kserd, Value};
+use crate::{Kserd, Value, ds::{InvalidId, InvalidFieldName}};
 use std::{error, fmt};
 
 /// _Convert_ something into a `Kserd`.
@@ -89,7 +89,9 @@ pub trait ToKserd<'a> {
 #[derive(Debug, PartialEq, Clone)]
 pub enum ToKserdErr {
     /// The identity contained invalid characters.
-    InvalidId,
+    InvalidId(InvalidId),
+    /// A container's field name contained invalid characters.
+    InvalidFieldName(InvalidFieldName),
 }
 
 impl error::Error for ToKserdErr {}
@@ -97,7 +99,8 @@ impl error::Error for ToKserdErr {}
 impl fmt::Display for ToKserdErr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ToKserdErr::InvalidId => write!(f, "the identity contained invalid characters"),
+            ToKserdErr::InvalidId(s) => write!(f, "{}", s),
+            ToKserdErr::InvalidFieldName(s) => write!(f, "{}", s),
         }
     }
 }
@@ -108,13 +111,16 @@ impl<'a> ToKserd<'a> for Kserd<'a> {
     }
 }
 
-#[test]
-fn test_kserd_err_fmt() {
-    let err = ToKserdErr::InvalidId;
-    assert_eq!(
-        &err.to_string(),
-        "the identity contained invalid characters"
-    );
+impl From<InvalidId> for ToKserdErr {
+    fn from(id: InvalidId) -> ToKserdErr {
+        ToKserdErr::InvalidId(id)
+    }
+}
+
+impl From<InvalidFieldName> for ToKserdErr {
+    fn from(x: InvalidFieldName) -> ToKserdErr {
+        ToKserdErr::InvalidFieldName(x)
+    }
 }
 
 #[cfg(test)]
@@ -345,6 +351,7 @@ where
 /// that value, or it will be an empty tuple with the name `None`.
 ///
 /// ```rust
+/// # use kserd::*;
 /// let option = Some(String::from("Hello, world!"));
 /// assert_eq!(option.into_kserd(), Ok(Kserd::new_str("Hello, world!")));
 /// let option: Option<String> = None;
