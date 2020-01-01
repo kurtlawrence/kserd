@@ -1,4 +1,4 @@
-//! [![Build Status](https://travis-ci.com/kurtlawrence/kserd.svg?branch=master)](https://travis-ci.com/kurtlawrence/kserd)
+//! [![Build Status](https://github.com/kurtlawrence/kserd/workflows/Rust/badge.svg)](https://github.com/kurtlawrence/kserd/actions)
 //! [![Latest Version](https://img.shields.io/crates/v/kserd.svg)](https://crates.io/crates/kserd)
 //! [![Rust Documentation](https://img.shields.io/badge/api-rustdoc-blue.svg)](https://docs.rs/kserd)
 //! [![codecov](https://codecov.io/gh/kurtlawrence/kserd/branch/master/graph/badge.svg)](https://codecov.io/gh/kurtlawrence/kserd)
@@ -22,6 +22,7 @@
 //! ```rust
 //! use kserd::*;
 //!
+//! # #[cfg(feature = "encode")] {
 //! // Kserd and Value are the building blocks of the data.
 //! let mut kserd = Kserd::with_id("greeting", Value::new_str("Hello")).unwrap();
 //!
@@ -38,6 +39,7 @@
 //!
 //! // can format the kserd into a human-readable string
 //! println!("{}", kserd.as_str()); // should print [0, 1, 2, 4]
+//! # }
 //! ```
 //!
 //! It is recommended to consult the [api documentation](crate) as there is extensive examples and
@@ -60,6 +62,7 @@
 //! - [ ] further testing of parsing to catch edge cases
 
 #![warn(missing_docs)]
+#![deny(intra_doc_link_resolution_failure)]
 
 // **************** no-feature ******************
 

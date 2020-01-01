@@ -1,3 +1,4 @@
+#![cfg(feature = "encode")]
 extern crate kserd;
 #[macro_use]
 extern crate serde_derive;

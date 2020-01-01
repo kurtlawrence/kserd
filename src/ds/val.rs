@@ -32,7 +32,7 @@ use std::fmt;
 /// ```
 ///
 /// [`BTreeMap`]: std::collections::BTreeMap
-/// [`Kserd`]: ds::Kserd
+/// [`Kserd`]: crate::Kserd
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value<'a> {
     /// A unit value `()`.
@@ -487,7 +487,7 @@ impl<'a> Value<'a> {
     /// assert_eq!(value, brwed);
     /// ```
     ///
-    /// [`Decoder`]: encode::Decoder
+    /// [`Decoder`]: crate::encode::Decoder
     pub fn mk_brw<'b>(&'b self) -> Value<'b> {
         match &self {
             Value::Unit => Value::Unit,

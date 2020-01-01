@@ -16,17 +16,17 @@ jobs:
         rust: [nightly, stable, 1.36.0]
         include:
           - name: default-features
-            cmd: cargo test
+            cmd: cargo check
           - name: no-features
-            cmd: cargo test --no-default-features
+            cmd: cargo check --no-default-features
           - name: all-features
             cmd: cargo test --all-features
           - name: format
-            cmd: cargo test --no-default-features --features="format"
+            cmd: cargo check --no-default-features --features="format"
           - name: encode
-            cmd: cargo test --no-default-features --features="encode"
+            cmd: cargo check --no-default-features --features="encode"
           - name: parse
-            cmd: cargo test --no-default-features --features="parse"
+            cmd: cargo check --no-default-features --features="parse"
                
     name: ${{ matrix.name }} with ${{ matrix.rust }} on ${{ matrix.os }}
     
@@ -63,21 +63,3 @@ jobs:
            
     - name: Run tests
       run: ${{ matrix.cmd }}
-      
-  format-check:
-    name: format-check
-    runs-on: [ubuntu-latest]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2      
-      
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt
-
-      - name: Check formatting
-        run: cargo fmt -- --check

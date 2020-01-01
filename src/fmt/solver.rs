@@ -440,6 +440,7 @@ fn min_line_repr(
 mod tests {
     use super::*;
 
+    #[cfg(feature = "encode")]
     #[test]
     fn test_inline_widths() {
         let kserd = Kserd::enc(&(100, -101, "Hello\n")).unwrap();
@@ -619,5 +620,4 @@ mod tests {
         assert_eq!(f(1), 4); //     1234:
         assert_eq!(f(2), 10); //          123456
     }
-
 }

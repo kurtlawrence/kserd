@@ -3,7 +3,7 @@ use std::{error, fmt};
 
 /// _Convert_ something into a `Kserd`.
 ///
-/// This differs to [_encoding_](encode::Encoder) in that the object is _consumed_. This trait
+/// This differs to [_encoding_](crate::encode::Encoder) in that the object is _consumed_. This trait
 /// allows for less copying as data can be _moved_, in the case of strings or byte arrays.
 ///
 /// # Implementing
@@ -14,7 +14,7 @@ use std::{error, fmt};
 ///
 /// ```rust
 /// use kserd::*;
-///
+/// # #[cfg(feature = "fmt")] {
 /// struct MyStruct<'a> {
 ///     e: MyEnum,
 ///     s: &'a str,
@@ -78,6 +78,7 @@ use std::{error, fmt};
 ///     v = [(0, 1), (2, 3), (4, 5)]
 /// )"#
 /// );
+/// # }
 /// ```
 pub trait ToKserd<'a> {
     /// Consume the object and convert it into a [`Kserd`](Kserd) data object.

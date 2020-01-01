@@ -1,3 +1,4 @@
+#![cfg(feature = "encode")]
 #[macro_use]
 extern crate serde_derive;
 
@@ -115,7 +116,6 @@ mod prims {
             &Kserd::with_id("something", Value::new_num(-123456789)).unwrap()
         );
     }
-
 }
 
 mod tuples {
@@ -180,7 +180,6 @@ mod tuples {
 )"#;
         do_test!(s, &ans);
     }
-
 }
 
 mod containers {
@@ -510,7 +509,6 @@ mod containers {
         map.insert("a".into(), Kserd::new_num(1));
         do_test!("a = 1", &Kserd::new(Value::Cntr(map)));
     }
-
 }
 
 mod seq {
@@ -593,7 +591,6 @@ mod seq {
         let s = ans.as_str_with_config(config);
         do_test!(&s, &ans);
     }
-
 }
 
 mod map {
@@ -694,5 +691,4 @@ mod map {
         });
         do_test!(&s, &ans);
     }
-
 }

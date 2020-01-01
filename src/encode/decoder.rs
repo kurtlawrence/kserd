@@ -542,5 +542,4 @@ mod tests {
         // round_trip_test!(&[u8], &b"Hello, world!"[..], &b"\nThis is me!"[..]);
         // round_trip_test!(Vec<u8>, b"Hello, world!".to_vec(), b"\nThis is me!".to_vec());
     }
-
 }
