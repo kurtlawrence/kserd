@@ -582,4 +582,32 @@ mod tests {
         assert!(Number::from(128i128) == Number::from(128.0));
         assert!(Number::from(128i128) < Number::from(128.1));
     }
+
+    #[test]
+    fn eq_int_uint() {
+        assert_ne!(Number::from(-123), Number::from(123usize));
+        assert_eq!(Number::from(123isize), Number::from(123usize));
+    }
+
+    #[test]
+    fn float_to_int_cmp() {
+        use std::f64::{INFINITY, NAN, NEG_INFINITY};
+        use Ordering::*;
+
+        assert_eq!(Number::from(123u8).cmp(&Number::from(INFINITY)), Less);
+        assert_eq!(Number::from(123u8).cmp(&Number::from(NAN)), Less);
+        assert_eq!(Number::from(123u8).cmp(&Number::from(123f32)), Equal);
+        assert_eq!(
+            Number::from(123u8).cmp(&Number::from(NEG_INFINITY)),
+            Greater
+        );
+    }
+
+    #[test]
+    fn rev_ordering_test() {
+        use Ordering::*;
+        assert_eq!(rev_ordering(Less), Greater);
+        assert_eq!(rev_ordering(Greater), Less);
+        assert_eq!(rev_ordering(Equal), Equal);
+    }
 }
