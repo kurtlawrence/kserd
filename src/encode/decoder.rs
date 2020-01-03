@@ -240,121 +240,42 @@ impl<'de> de::VariantAccess<'de> for Decoder<'de> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Error> {
-        let Kserd { val, .. } = self.0;
-
-        let mut _tstr = Kstr::brwed("");
-        let mut _tbarr = Barr::brwed([].as_ref());
-
-        let unexp = match val {
-            Value::Unit => {
-                return Ok(());
-            }
-            Value::Bool(v) => Unexpected::Bool(v),
-            Value::Num(n) => match n {
-                Number::Uint(n) => Unexpected::Unsigned(n.try_into().unwrap_or_default()),
-                Number::Int(n) => Unexpected::Signed(n.try_into().unwrap_or_default()),
-                Number::Float(n) => Unexpected::Float(n),
-            },
-            Value::Str(v) => {
-                _tstr = v;
-                Unexpected::Str(_tstr.as_str())
-            }
-            Value::Barr(v) => {
-                _tbarr = v;
-                Unexpected::Bytes(_tbarr.as_bytes())
-            }
-            Value::Tuple(_) => Unexpected::Other("tuple"),
-            Value::Cntr(_) => Unexpected::Other("container"),
-            Value::Seq(_) => Unexpected::Seq,
-            Value::Map(_) => Unexpected::Map,
-        };
-
-        Err(de::Error::invalid_type(unexp, &"unit value"))
+        unexp_matching(self.0.val, &"unit value", |val| match val {
+            Value::Unit => Ok(Ok(())),
+            x => Err(x),
+        })
     }
 
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Error>
     where
         T: de::DeserializeSeed<'de>,
     {
-        let Kserd { val, .. } = self.0;
-
-        let mut _tstr = Kstr::brwed("");
-        let mut _tbarr = Barr::brwed([].as_ref());
-
-        let unexp = match val {
-            Value::Unit => Unexpected::Unit,
-            Value::Bool(v) => Unexpected::Bool(v),
-            Value::Num(n) => match n {
-                Number::Uint(n) => Unexpected::Unsigned(n.try_into().unwrap_or_default()),
-                Number::Int(n) => Unexpected::Signed(n.try_into().unwrap_or_default()),
-                Number::Float(n) => Unexpected::Float(n),
-            },
-            Value::Str(v) => {
-                _tstr = v;
-                Unexpected::Str(_tstr.as_str())
-            }
-            Value::Barr(v) => {
-                _tbarr = v;
-                Unexpected::Bytes(_tbarr.as_bytes())
-            }
-            Value::Tuple(mut v) => {
-                if v.len() == 1 {
-                    return seed.deserialize(Decoder(v.pop().expect("one should exist")));
-                } else {
-                    return Err(de::Error::invalid_length(
-                        v.len(),
-                        &"a tuple with a single element was expected",
-                    ));
-                }
-            }
-            Value::Cntr(_) => Unexpected::Other("container"),
-            Value::Seq(_) => Unexpected::Seq,
-            Value::Map(_) => Unexpected::Map,
-        };
-
-        Err(de::Error::invalid_type(unexp, &"newtype enum variant"))
+        unexp_matching(self.0.val, &"newtype enum variant", |val| match val {
+            Value::Tuple(mut v) => Ok(if v.len() == 1 {
+                seed.deserialize(Decoder(v.pop().expect("one should exist")))
+            } else {
+                Err(de::Error::invalid_length(
+                    v.len(),
+                    &"a tuple with a single element was expected",
+                ))
+            }),
+            x => Err(x),
+        })
     }
 
     fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
-        let Kserd { val, .. } = self.0;
-
-        let mut _tstr = Kstr::brwed("");
-        let mut _tbarr = Barr::brwed([].as_ref());
-
-        let unexp = match val {
-            Value::Unit => Unexpected::Unit,
-            Value::Bool(v) => Unexpected::Bool(v),
-            Value::Num(n) => match n {
-                Number::Uint(n) => Unexpected::Unsigned(n.try_into().unwrap_or_default()),
-                Number::Int(n) => Unexpected::Signed(n.try_into().unwrap_or_default()),
-                Number::Float(n) => Unexpected::Float(n),
-            },
-            Value::Str(v) => {
-                _tstr = v;
-                Unexpected::Str(_tstr.as_str())
-            }
-            Value::Barr(v) => {
-                _tbarr = v;
-                Unexpected::Bytes(_tbarr.as_bytes())
-            }
-            Value::Tuple(v) => {
-                if v.len() == len {
-                    return visitor.visit_seq(SeqDeserializer::new(v.into_iter()));
-                } else {
-                    let msg = format!("a tuple with {} elements was expected", len);
-
-                    return Err(de::Error::invalid_length(v.len(), &msg.as_str()));
-                }
-            }
-            Value::Cntr(_) => Unexpected::Other("container"),
-            Value::Seq(_) => Unexpected::Seq,
-            Value::Map(_) => Unexpected::Map,
-        };
-
-        Err(de::Error::invalid_type(unexp, &"unit value"))
+        unexp_matching(self.0.val, &"tuple variant", |val| match val {
+            Value::Tuple(v) => Ok(if v.len() == len {
+                visitor.visit_seq(SeqDeserializer::new(v.into_iter()))
+            } else {
+                let msg = format!("a tuple with {} element(s) was expected", len);
+                Err(de::Error::invalid_length(v.len(), &msg.as_str()))
+            }),
+            x => Err(x),
+        })
     }
 
     fn struct_variant<V>(
@@ -365,38 +286,12 @@ impl<'de> de::VariantAccess<'de> for Decoder<'de> {
     where
         V: Visitor<'de>,
     {
-        let Kserd { val, .. } = self.0;
-
-        let mut _tstr = Kstr::brwed("");
-        let mut _tbarr = Barr::brwed([].as_ref());
-
-        let unexp = match val {
-            Value::Unit => Unexpected::Unit,
-            Value::Bool(v) => Unexpected::Bool(v),
-            Value::Num(n) => match n {
-                Number::Uint(n) => Unexpected::Unsigned(n.try_into().unwrap_or_default()),
-                Number::Int(n) => Unexpected::Signed(n.try_into().unwrap_or_default()),
-                Number::Float(n) => Unexpected::Float(n),
-            },
-            Value::Str(v) => {
-                _tstr = v;
-                Unexpected::Str(_tstr.as_str())
-            }
-            Value::Barr(v) => {
-                _tbarr = v;
-                Unexpected::Bytes(_tbarr.as_bytes())
-            }
-            Value::Tuple(_) => Unexpected::Other("tuple"),
-            Value::Cntr(map) => {
-                return visitor.visit_map(MapDeserializer::new(
-                    map.into_iter().map(|(k, v)| (k.inner, v)),
-                ));
-            }
-            Value::Seq(_) => Unexpected::Seq,
-            Value::Map(_) => Unexpected::Map,
-        };
-
-        Err(de::Error::invalid_type(unexp, &"struct enum variant"))
+        unexp_matching(self.0.val, &"struct variant", |val| match val {
+            Value::Cntr(map) => Ok(visitor.visit_map(MapDeserializer::new(
+                map.into_iter().map(|(k, v)| (k.inner, v)),
+            ))),
+            x => Err(x),
+        })
     }
 }
 
@@ -420,8 +315,17 @@ fn unexp_err<'a, 'v>(val: &'a Value<'v>) -> Unexpected<'a> {
     }
 }
 
-// fn unexp_matching() -> Result<T, Unexpected<'a>> {
-// }
+fn unexp_matching<'v, T, E, F, S>(val: Value<'v>, expected: &S, matchfn: F) -> Result<T, E>
+where
+    F: FnOnce(Value<'v>) -> Result<Result<T, E>, Value<'v>>,
+    E: de::Error,
+    S: de::Expected,
+{
+    match matchfn(val) {
+        Ok(x) => x,
+        Err(val) => Err(de::Error::invalid_type(unexp_err(&val), expected)),
+    }
+}
 
 ////// ERROR ///////////////////////////////////////////////////////////////////
 
@@ -612,7 +516,7 @@ mod tests {
 
         let kserd = Kserd::new_barrv(vec![0, 1, 2]);
         let r = kserd.decode::<BarrTestOwned>();
-        assert_eq!(r, Ok(BarrTestOwned(vec![0,1,2])));
+        assert_eq!(r, Ok(BarrTestOwned(vec![0, 1, 2])));
     }
 
     #[test]
@@ -640,5 +544,137 @@ mod tests {
             r,
             Err("custom error: invalid type: string \"\", expected char".into())
         );
+    }
+
+    struct NoImplementVisitor;
+    impl<'de> Visitor<'de> for NoImplementVisitor {
+        type Value = ();
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(formatter, "")
+        }
+    }
+
+    #[test]
+    fn unexp_char_test() {
+        #[derive(Debug, PartialEq)]
+        struct Dummy;
+        impl<'de> Deserialize<'de> for Dummy {
+            fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+                d.deserialize_char(NoImplementVisitor).map(|_| Dummy)
+            }
+        }
+
+        let kserd = Kserd::new_num(3.14);
+        let r = kserd.decode::<Dummy>().map_err(|e| e.to_string());
+        assert_eq!(
+            r,
+            Err("custom error: invalid type: floating point `3.14`, expected char".into())
+        );
+
+        let kserd = Kserd::new_num(3.14);
+        let r = Decoder(kserd)
+            .deserialize_char(NoImplementVisitor)
+            .map_err(|e| e.to_string());
+        assert_eq!(
+            r,
+            Err("custom error: invalid type: floating point `3.14`, expected char".into())
+        );
+    }
+
+    #[test]
+    fn unexp_variants() {
+        assert_eq!(Decoder(Kserd::new_unit()).unit_variant(), Ok(()));
+        assert_eq!(
+            Decoder(Kserd::new_num(3))
+                .unit_variant()
+                .map_err(|e| e.to_string()),
+            Err("custom error: invalid type: integer `3`, expected unit value".into())
+        );
+
+        let kserd = Kserd::with_id(
+            "Test",
+            Value::Tuple(vec![Kserd::new_unit(), Kserd::new_unit()]),
+        )
+        .unwrap();
+        let r = Decoder(kserd)
+            .newtype_variant::<()>()
+            .map_err(|e| e.to_string());
+        assert_eq!(r, Err("custom error: invalid length 2, expected a tuple with a single element was expected".into()));
+
+        let kserd = Kserd::new_num(3);
+        let r = Decoder(kserd)
+            .newtype_variant::<()>()
+            .map_err(|e| e.to_string());
+        assert_eq!(
+            r,
+            Err("custom error: invalid type: integer `3`, expected newtype enum variant".into())
+        );
+
+        let kserd = Kserd::with_id(
+            "Test",
+            Value::Tuple(vec![Kserd::new_unit(), Kserd::new_unit()]),
+        )
+        .unwrap();
+        let r = Decoder(kserd)
+            .tuple_variant(1, NoImplementVisitor)
+            .map_err(|e| e.to_string());
+        assert_eq!(
+            r,
+            Err(
+                "custom error: invalid length 2, expected a tuple with 1 element(s) was expected"
+                    .into()
+            )
+        );
+
+        let kserd = Kserd::new_num(3);
+        let r = Decoder(kserd)
+            .tuple_variant(1, NoImplementVisitor)
+            .map_err(|e| e.to_string());
+        assert_eq!(
+            r,
+            Err("custom error: invalid type: integer `3`, expected tuple variant".into())
+        );
+
+        let kserd = Kserd::new_num(3);
+        let r = Decoder(kserd)
+            .struct_variant(&[], NoImplementVisitor)
+            .map_err(|e| e.to_string());
+        assert_eq!(
+            r,
+            Err("custom error: invalid type: integer `3`, expected struct variant".into())
+        );
+    }
+
+    #[test]
+    fn unexp_err_test() {
+        macro_rules! test {
+            ($kserd:expr, $exp:expr) => {{
+                assert_eq!(
+                    Decoder($kserd)
+                        .tuple_variant(1, NoImplementVisitor)
+                        .map_err(|e| e.to_string()),
+                    Err(format!("custom error: invalid type: {}, expected tuple variant", $exp))
+                );
+            }}
+        };
+
+        test!(Kserd::new_unit(), "unit value");
+        test!(Kserd::new_bool(true), "boolean `true`");
+        test!(Kserd::new_num(123u8), "integer `123`");
+        test!(Kserd::new_num(-123i8), "integer `-123`");
+        test!(Kserd::new_num(3.14), "floating point `3.14`");
+        test!(Kserd::new_str("Hello"), "string \"Hello\"");
+        test!(Kserd::new_barr([0,1,2].as_ref()), "byte array");
+        // handle tuple outside
+                assert_eq!(
+                    Decoder(Kserd::new(Value::Tuple(vec![])) )
+                        .unit_variant()
+                        .map_err(|e| e.to_string()),
+                    Err(format!("custom error: invalid type: {}, expected unit value", "tuple"))
+                );
+        test!(Kserd::new_cntr(vec![("a", Kserd::new_unit())]).unwrap(), "container");
+        test!(Kserd::new(Value::Seq(vec![])), "sequence");
+        test!(Kserd::new_map(vec![]), "map");
     }
 }
