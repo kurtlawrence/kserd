@@ -599,10 +599,14 @@ mod tests {
         let mut x = Value::Bool(true);
         x.bool_mut().map(|x| *x = false);
         assert_eq!(x.bool(), Some(false));
+        assert_eq!(x.num_mut(), None);
 
         let mut x = Value::new_num(123);
         x.num_mut().map(|x| *x = 3.14.into());
         assert_eq!(x.float(), Some(3.14));
+        assert_eq!(x.bool_mut(), None);
+        assert_eq!(x.str_mut(), None);
+        assert_eq!(x.barr_mut(), None);
 
         let mut x = Value::new_str("Hello");
         x.str_mut().map(|x| x.push_str(", world!"));
@@ -629,6 +633,12 @@ mod tests {
 
         let barr = Value::new_barr([0, 1].as_ref()).to_owned();
         assert_eq!(barr, Value::new_barr([0, 1].as_ref()));
+
+        let b = Value::Bool(true);
+        assert_eq!(b, b.clone());
+
+        let barr = Value::new_barr([0, 1].as_ref()).to_owned();
+        assert_eq!(barr, barr.clone());
 
         fn test(v: Kserd) {
             let vclone = v.clone();

@@ -420,6 +420,9 @@ fn unexp_err<'a, 'v>(val: &'a Value<'v>) -> Unexpected<'a> {
     }
 }
 
+// fn unexp_matching() -> Result<T, Unexpected<'a>> {
+// }
+
 ////// ERROR ///////////////////////////////////////////////////////////////////
 
 #[derive(Debug, PartialEq, Clone)]
@@ -446,7 +449,7 @@ impl fmt::Display for Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::Deserialize;
+    use serde::de::*;
 
     #[test]
     fn interface_check() {
@@ -541,5 +544,101 @@ mod tests {
         // Trying to create sequences by the looks of it.
         // round_trip_test!(&[u8], &b"Hello, world!"[..], &b"\nThis is me!"[..]);
         // round_trip_test!(Vec<u8>, b"Hello, world!".to_vec(), b"\nThis is me!".to_vec());
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct BarrTestOwned(Vec<u8>);
+
+    impl<'de> Deserialize<'de> for BarrTestOwned {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            d.deserialize_bytes(BarrTestVisitor)
+                .map(|x| x.to_vec())
+                .map(BarrTestOwned)
+        }
+    }
+
+    struct BarrTestVisitor;
+
+    impl<'de> Visitor<'de> for BarrTestVisitor {
+        type Value = Vec<u8>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(formatter, "")
+        }
+
+        fn visit_borrowed_bytes<E: std::error::Error>(
+            self,
+            v: &'de [u8],
+        ) -> Result<Self::Value, E> {
+            Ok(v.to_vec())
+        }
+
+        fn visit_byte_buf<E: std::error::Error>(self, v: Vec<u8>) -> Result<Self::Value, E> {
+            Ok(v)
+        }
+
+        fn visit_newtype_struct<D: Deserializer<'de>>(
+            self,
+            deserializer: D,
+        ) -> Result<Self::Value, D::Error> {
+            dbg!();
+            deserializer.deserialize_bytes(BarrTestVisitor)
+        }
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct NewTypeTest(Vec<u8>);
+
+    impl<'de> Deserialize<'de> for NewTypeTest {
+        fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+            d.deserialize_newtype_struct("", BarrTestVisitor)
+                .map(|x| x.to_vec())
+                .map(NewTypeTest)
+        }
+    }
+
+    #[test]
+    fn barr_deserializing() {
+        let kserd = Kserd::new_barr([0, 1, 2].as_ref());
+        let v = vec![0, 1, 2];
+
+        let expected = BarrTestOwned(v.clone());
+        let r = kserd.clone().decode::<BarrTestOwned>();
+        assert_eq!(r, Ok(expected));
+
+        let expected = BarrTestOwned(v);
+        let r = kserd.clone().decode::<BarrTestOwned>();
+        assert_eq!(r, Ok(expected));
+
+        let kserd = Kserd::new_barrv(vec![0, 1, 2]);
+        let r = kserd.decode::<BarrTestOwned>();
+        assert_eq!(r, Ok(BarrTestOwned(vec![0,1,2])));
+    }
+
+    #[test]
+    fn test_newtype_struct() {
+        let kserd = Kserd::with_id(
+            "NewTypeTest",
+            Value::Tuple(vec![Kserd::new_barr([0, 1, 2].as_ref())]),
+        )
+        .unwrap();
+        let expected = NewTypeTest(vec![0, 1, 2]);
+
+        let r = kserd.decode::<NewTypeTest>();
+        assert_eq!(r, Ok(expected));
+    }
+
+    #[test]
+    fn test_deserialize_char() {
+        let kserd = Kserd::new_str("x");
+        let r = kserd.decode::<char>();
+        assert_eq!(r, Ok('x'));
+
+        let kserd = Kserd::new_str("");
+        let r = kserd.decode::<char>().map_err(|x| x.to_string());
+        assert_eq!(
+            r,
+            Err("custom error: invalid type: string \"\", expected char".into())
+        );
     }
 }
