@@ -654,9 +654,12 @@ mod tests {
                     Decoder($kserd)
                         .tuple_variant(1, NoImplementVisitor)
                         .map_err(|e| e.to_string()),
-                    Err(format!("custom error: invalid type: {}, expected tuple variant", $exp))
+                    Err(format!(
+                        "custom error: invalid type: {}, expected tuple variant",
+                        $exp
+                    ))
                 );
-            }}
+            }};
         };
 
         test!(Kserd::new_unit(), "unit value");
@@ -665,15 +668,21 @@ mod tests {
         test!(Kserd::new_num(-123i8), "integer `-123`");
         test!(Kserd::new_num(3.14), "floating point `3.14`");
         test!(Kserd::new_str("Hello"), "string \"Hello\"");
-        test!(Kserd::new_barr([0,1,2].as_ref()), "byte array");
+        test!(Kserd::new_barr([0, 1, 2].as_ref()), "byte array");
         // handle tuple outside
-                assert_eq!(
-                    Decoder(Kserd::new(Value::Tuple(vec![])) )
-                        .unit_variant()
-                        .map_err(|e| e.to_string()),
-                    Err(format!("custom error: invalid type: {}, expected unit value", "tuple"))
-                );
-        test!(Kserd::new_cntr(vec![("a", Kserd::new_unit())]).unwrap(), "container");
+        assert_eq!(
+            Decoder(Kserd::new(Value::Tuple(vec![])))
+                .unit_variant()
+                .map_err(|e| e.to_string()),
+            Err(format!(
+                "custom error: invalid type: {}, expected unit value",
+                "tuple"
+            ))
+        );
+        test!(
+            Kserd::new_cntr(vec![("a", Kserd::new_unit())]).unwrap(),
+            "container"
+        );
         test!(Kserd::new(Value::Seq(vec![])), "sequence");
         test!(Kserd::new_map(vec![]), "map");
     }

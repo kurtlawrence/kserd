@@ -449,3 +449,66 @@ impl ser::SerializeStructVariant for CntrLike {
         Ok(self.kserd)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ser::Error as _;
+    use ser::{SerializeMap, Serializer};
+
+    #[test]
+    fn other_tests() {
+        let kserd = Encoder.serialize_newtype_struct("Test", &());
+        assert_eq!(kserd, Ok(Kserd::new(Value::Tuple(vec![Kserd::new_unit()]))));
+        let kserd = kserd.unwrap();
+        assert_eq!(kserd.id(), Some("Test"));
+        let kserd = Encoder
+            .serialize_newtype_struct("\\Test", &())
+            .map_err(|e| e.to_string());
+        assert_eq!(kserd, Err(r#"identity '\Test' contains invalid characters. Invalid characters: '(){}[]<> ,./\='"#.into()));
+
+        let kserd = Encoder
+            .serialize_newtype_variant("\\Test", 0, "\\Test", &())
+            .map_err(|e| e.to_string());
+        assert_eq!(kserd, Err(r#"identity '\Test' contains invalid characters. Invalid characters: '(){}[]<> ,./\='"#.into()));
+
+        let kserd = Encoder.collect_str("Hello, world!");
+        assert_eq!(kserd, Ok(Kserd::new_str("Hello, world!")));
+
+        let err = Error::custom("Hello");
+        assert_eq!(&err.to_string(), "custom error: Hello");
+    }
+
+    #[test]
+    fn map_tests() {
+        let map: std::collections::HashMap<u64, String> =
+            vec![(100, "Hello".into())].into_iter().collect();
+        let kserd = Kserd::enc(&map);
+        assert_eq!(
+            kserd,
+            Ok(Kserd::new_map(vec![(
+                100.into_kserd().unwrap(),
+                "Hello".into_kserd().unwrap()
+            )]))
+        );
+
+        let mut map = MapLike {
+            key: None,
+            kserd: Kserd::new_map(vec![]),
+        };
+
+        let r = map.serialize_key(&100);
+        assert_eq!(r, Ok(()));
+        assert_eq!(map.key, Some(Kserd::new_num(100)));
+
+        let r = map.serialize_value("Hello");
+        assert_eq!(r, Ok(()));
+        assert_eq!(
+            map.kserd,
+            Kserd::new_map(vec![(
+                100.into_kserd().unwrap(),
+                "Hello".into_kserd().unwrap()
+            )])
+        );
+    }
+}
