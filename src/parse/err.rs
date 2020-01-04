@@ -171,11 +171,20 @@ fn make_empty_trace(ekind: &VerboseErrorKind) -> Trace<'static> {
 fn make_trace_msg<'a>(linestr: &str, col: usize, ekind: &VerboseErrorKind) -> String {
     use VerboseErrorKind::*;
     match ekind {
-        Char(c) => format!(
-            "expected '{}', found '{}'",
-            c,
-            linestr[col..].chars().next().unwrap()
-        ),
+        Char(c) => {
+            if col >= linestr.len() {
+                format!("expected '{}', reached end of line or end of file first", c)
+            } else {
+                format!(
+                    "expected '{}', found '{}'",
+                    c,
+                    linestr[col..]
+                        .chars()
+                        .next()
+                        .expect("character should exist at col")
+                )
+            }
+        }
         Context(s) => format!("in {}", s),
         Nom(e) => format!("in {:?}", e),
     }
@@ -246,5 +255,145 @@ mod tests {
         assert_eq!(get_line(&map, 22), Some((16, 4, "World")));
         assert_eq!(get_line(&map, 23), Some((16, 4, "World")));
         assert_eq!(get_line(&map, 24), Some((16, 4, "World")));
+    }
+
+    #[test]
+    fn str_parse() {
+        let s = r#"<str> "Hello, world!"#;
+        let err = parse(s).unwrap_err();
+        println!("{}", err.backtrace());
+
+        assert_eq!(err.len(), 4);
+        assert_eq!(
+            err.get(0),
+            Some(Trace {
+                line: 1,
+                col: 21,
+                linestr: r#"<str> "Hello, world!"#,
+                msg: format!(r#"expected '"', reached end of line or end of file first"#),
+            })
+        );
+        assert_eq!(
+            err.get(1),
+            Some(Trace {
+                line: 1,
+                col: 7,
+                linestr: r#"<str> "Hello, world!"#,
+                msg: format!(r#"in string"#),
+            })
+        );
+        assert_eq!(
+            err.get(2),
+            Some(Trace {
+                line: 1,
+                col: 7,
+                linestr: r#"<str> "Hello, world!"#,
+                msg: format!(r#"in primitive value"#),
+            })
+        );
+        assert_eq!(
+            err.get(3),
+            Some(Trace {
+                line: 1,
+                col: 1,
+                linestr: r#"<str> "Hello, world!"#,
+                msg: format!(r#"in primitive"#),
+            })
+        );
+        assert_eq!(err.get(4), None);
+    }
+
+    #[test]
+    fn test_parse_err_get() {
+        let s = r#"
+[[a-map]]
+("key, 1):
+    [1,2,3,,4]
+"#;
+        let err = parse(s).unwrap_err();
+
+        println!("{}", err.backtrace());
+
+        assert_eq!(
+            err.get(0),
+            Some(Trace {
+                line: 3,
+                col: 11,
+                linestr: r#"("key, 1):"#,
+                msg: format!(r#"expected '"', reached end of line or end of file first"#),
+            })
+        );
+    }
+
+    #[test]
+    fn test_empty_trace() {
+        let err = parse("").unwrap_err();
+
+        println!("{}", err.backtrace());
+
+        for trace in err.iter() {
+            assert_eq!(trace.msg.contains("got empty input"), true);
+        }
+    }
+
+    #[test]
+    fn debug_err_fmt() {
+        let err = parse("(1,2,5]").unwrap_err();
+        assert_eq!(format!("{:?}", err), err.backtrace());
+    }
+
+    #[test]
+    fn make_empty_trace_test() {
+        assert_eq!(
+            make_empty_trace(&VerboseErrorKind::Char('x')),
+            Trace {
+                line: 0,
+                col: 0,
+                linestr: "",
+                msg: r#"expected 'x', got empty input"#.into()
+            }
+        );
+        assert_eq!(
+            make_empty_trace(&VerboseErrorKind::Context("some-context")),
+            Trace {
+                line: 0,
+                col: 0,
+                linestr: "",
+                msg: r#"in some-context, got empty input"#.into()
+            }
+        );
+        assert_eq!(
+            make_empty_trace(&VerboseErrorKind::Nom(nom::error::ErrorKind::Alt)),
+            Trace {
+                line: 0,
+                col: 0,
+                linestr: "",
+                msg: r#"in Alt, got empty input"#.into()
+            }
+        );
+    }
+
+    #[test]
+    fn make_trace_msg_test() {
+        assert_eq!(
+            &make_trace_msg("a line string", 5, &VerboseErrorKind::Char('x')),
+            "expected 'x', found 'e'"
+        );
+        assert_eq!(
+            &make_trace_msg(
+                "a line string",
+                5,
+                &VerboseErrorKind::Context("some-context")
+            ),
+            "in some-context"
+        );
+        assert_eq!(
+            &make_trace_msg(
+                "a line string",
+                5,
+                &VerboseErrorKind::Nom(nom::error::ErrorKind::Alt)
+            ),
+            "in Alt"
+        );
     }
 }
