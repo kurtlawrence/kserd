@@ -4,6 +4,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+const INVALID: &str = "(){}[]<> ,./\\=";
+
 /// The atomic value.
 ///
 /// `Kserd` contains an optional identity (`id`), and the [`Value`]. Taken together the `Kserd` object can
@@ -67,7 +69,7 @@ impl Kserd<'static> {
     /// assert_eq!(kserd.unit(), true);
     /// assert_eq!(kserd.id(), None);
     /// ```
-    pub fn new_unit() -> Self {
+    pub const fn new_unit() -> Self {
         Kserd::new(Value::Unit)
     }
 
@@ -150,7 +152,7 @@ impl<'a> Kserd<'a> {
     /// ```
     ///
     /// [`Value`]: crate::Value
-    pub fn new(value: Value<'a>) -> Self {
+    pub const fn new(value: Value<'a>) -> Self {
         Self {
             id: None,
             val: value,
@@ -181,14 +183,10 @@ impl<'a> Kserd<'a> {
     /// [`Value`]: crate::Value
     /// [`Kstr`]: crate::Kstr
     pub fn with_id<S: Into<Kstr<'a>>>(identity: S, value: Value<'a>) -> Result<Self, InvalidId> {
-        const INVALID: &str = "(){}[]<> ,./\\=";
         let id = identity.into();
 
         if id.chars().any(|c| INVALID.contains(c)) {
-            Err(InvalidId(format!(
-                "identity '{}' contains invalid characters. Invalid characters: '{}'",
-                id, INVALID
-            )))
+            Err(InvalidId(id.to_string()))
         } else {
             Ok(Self {
                 id: Some(id),
@@ -391,6 +389,60 @@ impl error::Error for InvalidId {}
 
 impl fmt::Display for InvalidId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "id contains invalid characters: {}", self.0)
+        write!(
+            f,
+            r#"identity '{}' contains invalid characters. Invalid characters: '{}'"#,
+            self.0, INVALID
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_barrv_test() {
+        let kserd = Kserd::new_barrv(vec![0, 1, 2, 3]);
+        assert_eq!(kserd.barr(), Some([0, 1, 2, 3].as_ref()));
+        assert_eq!(kserd.id(), Some("ByteVec"));
+    }
+
+    #[test]
+    fn invalid_id_test() {
+        let kserd = Kserd::with_id("an-identity", Value::Bool(true)).unwrap();
+        assert_eq!(kserd.bool(), Some(true));
+        assert_eq!(kserd.id(), Some("an-identity"));
+
+        let kserd = Kserd::with_id("<an,> in(valid.)/{identity}\\=", Value::Unit);
+        assert_eq!(kserd.is_err(), true);
+    }
+
+    #[test]
+    fn deref_mut_test() {
+        let mut kserd = Kserd::new_bool(true);
+        let val: &mut Value = &mut kserd;
+        *val = Value::new_num(123);
+        assert_eq!(kserd.uint(), Some(123));
+    }
+
+    #[test]
+    fn partial_cmp_test() {
+        let kserd1 = Kserd::new_num(0);
+        let kserd2 = Kserd::new_num(1);
+        assert!(kserd1 < kserd2);
+    }
+
+    #[test]
+    fn debug_fmt_test() {
+        let kserd = Kserd::new(Value::Bool(false));
+        let s = format!("{:?}", kserd);
+        assert_eq!(&s, "Kserd { id: None, val: Bool(false) }");
+    }
+
+    #[test]
+    fn invalid_id_formatting_test() {
+        let kserd = Kserd::with_id("\\// ", Value::Bool(true)).map_err(|e| e.to_string());
+        assert_eq!(kserd, Err(r#"identity '\// ' contains invalid characters. Invalid characters: '(){}[]<> ,./\='"#.to_owned()));
     }
 }

@@ -94,7 +94,7 @@ impl InvalidFieldName {
             for c in s.chars() {
                 if invalid.contains(c) {
                     return Err(InvalidFieldName(Cow::Owned(format!(
-                        "invalid char {} exists in name {}",
+                        "invalid character '{}' exists in name '{}'",
                         c, s
                     ))));
                 }
@@ -144,7 +144,7 @@ impl Value<'static> {
     /// let value = Value::new_string(String::from("Hello, world!"));
     /// assert_eq!(value.str(), Some("Hello, world!"));
     /// ```
-    pub fn new_string(string: String) -> Self {
+    pub const fn new_string(string: String) -> Self {
         Value::Str(Kstr::owned(string))
     }
 
@@ -157,7 +157,7 @@ impl Value<'static> {
     /// let value = Value::new_barrv(vec![0,1,2,3]);
     /// assert_eq!(value.barr(), Some([0,1,2,3].as_ref()));
     /// ```
-    pub fn new_barrv(byte_array: Vec<u8>) -> Self {
+    pub const fn new_barrv(byte_array: Vec<u8>) -> Self {
         Value::Barr(Barr::owned(byte_array))
     }
 }
@@ -172,7 +172,7 @@ impl<'a> Value<'a> {
     /// let value = Value::new_str("Hello, world!");
     /// assert_eq!(value.str(), Some("Hello, world!"));
     /// ```
-    pub fn new_str(string: &'a str) -> Self {
+    pub const fn new_str(string: &'a str) -> Self {
         Value::Str(Kstr::brwed(string))
     }
 
@@ -184,7 +184,7 @@ impl<'a> Value<'a> {
     /// let value = Value::new_barr([0,1,2,5,10].as_ref());
     /// assert_eq!(value.barr(), Some([0,1,2,5,10].as_ref()));
     /// ```
-    pub fn new_barr(byte_array: &'a [u8]) -> Self {
+    pub const fn new_barr(byte_array: &'a [u8]) -> Self {
         Value::Barr(Barr::brwed(byte_array))
     }
 
@@ -570,5 +570,120 @@ impl<'a> fmt::Debug for Value<'a> {
             Value::Seq(v) => f.debug_list().entries(v.iter()).finish(),
             Value::Map(v) => f.debug_map().entries(v.iter()).finish(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_field_test() {
+        fn f(s: &str) -> String {
+            InvalidFieldName::validate(s).unwrap_err().to_string()
+        };
+
+        assert_eq!(&f(""), "invalid field name: name is empty");
+        assert_eq!(
+            &f("9name"),
+            "invalid field name: name can not begin with digit"
+        );
+        assert_eq!(
+            &f("na\tme"),
+            "invalid field name: invalid character '\t' exists in name 'na\tme'"
+        );
+    }
+
+    #[test]
+    fn mutable_testing() {
+        let mut x = Value::Bool(true);
+        x.bool_mut().map(|x| *x = false);
+        assert_eq!(x.bool(), Some(false));
+        assert_eq!(x.num_mut(), None);
+
+        let mut x = Value::new_num(123);
+        x.num_mut().map(|x| *x = 3.14.into());
+        assert_eq!(x.float(), Some(3.14));
+        assert_eq!(x.bool_mut(), None);
+        assert_eq!(x.str_mut(), None);
+        assert_eq!(x.barr_mut(), None);
+
+        let mut x = Value::new_str("Hello");
+        x.str_mut().map(|x| x.push_str(", world!"));
+        assert_eq!(x.str(), Some("Hello, world!"));
+
+        let mut x = Value::new_barr([0, 1, 2].as_ref());
+        x.barr_mut().map(|x| x.push(3));
+        assert_eq!(x.barr(), Some([0, 1, 2, 3].as_ref()));
+    }
+
+    #[test]
+    fn conversion_testing() {
+        let unit = Value::Unit.to_owned();
+        assert_eq!(unit, Value::Unit);
+
+        let b = Value::Bool(true).to_owned();
+        assert_eq!(b, Value::Bool(true));
+
+        let n = Value::new_num(3.14).to_owned();
+        assert_eq!(n, Value::new_num(3.14));
+
+        let s = Value::new_str("What!?").to_owned();
+        assert_eq!(s, Value::new_str("What!?"));
+
+        let barr = Value::new_barr([0, 1].as_ref()).to_owned();
+        assert_eq!(barr, Value::new_barr([0, 1].as_ref()));
+
+        let b = Value::Bool(true);
+        assert_eq!(b, b.clone());
+
+        let barr = Value::new_barr([0, 1].as_ref()).to_owned();
+        assert_eq!(barr, barr.clone());
+
+        fn test(v: Kserd) {
+            let vclone = v.clone();
+            assert_eq!(v.to_owned(), vclone);
+        };
+
+        test(Kserd::new(Value::Tuple(vec![
+            Kserd::new_str("Hello"),
+            Kserd::new_num(3.14),
+        ])));
+        test(Kserd::new_cntr(vec![("a", Kserd::new_unit())]).unwrap());
+        test(Kserd::new(Value::Seq(vec![
+            Kserd::new_str("Hello"),
+            Kserd::new_num(3.14),
+        ])));
+        test(Kserd::new_map(vec![(Kserd::new_unit(), Kserd::new_num(0))]));
+
+        let unit = Value::Unit;
+        assert_eq!(unit, unit.mk_brw());
+
+        let b = Value::Bool(true);
+        assert_eq!(b, b.mk_brw());
+
+        let n = Value::new_num(3.14);
+        assert_eq!(n, n.mk_brw());
+
+        let s = Value::new_str("What!?");
+        assert_eq!(s, s.mk_brw());
+
+        let barr = Value::new_barr([0, 1].as_ref());
+        assert_eq!(barr, barr.mk_brw());
+
+        fn test2(v: Kserd) {
+            assert_eq!(v.mk_brw(), v);
+        };
+
+        test2(Kserd::new(Value::Tuple(vec![
+            Kserd::new_str("Hello"),
+            Kserd::new_num(3.14),
+        ])));
+        test2(Kserd::new_cntr(vec![("a", Kserd::new_unit())]).unwrap());
+        test2(Kserd::new(Value::Seq(vec![
+            Kserd::new_str("Hello"),
+            Kserd::new_num(3.14),
+        ])));
+        test2(Kserd::new_map(vec![(Kserd::new_unit(), Kserd::new_num(0))]));
     }
 }

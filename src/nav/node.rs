@@ -325,3 +325,104 @@ impl<'a, 'k, 'node, 'nav> PartialEq for Node<'a, 'k, 'node, 'nav> {
 }
 
 impl<'a, 'k, 'node, 'nav> Eq for Node<'a, 'k, 'node, 'nav> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fmt_debug_test() {
+        let kserd = Kserd::new_unit();
+        let nav = Navigator::new(&kserd);
+        let s = format!("{:#?}", nav.root());
+        println!("{}", s);
+        assert_eq!(
+            &s,
+            r#"Node {
+    id: None,
+    value-type: "Primitive",
+    value: Unit,
+    index: 0,
+    parent: None,
+    is_key: false,
+    idx_in_parent: 0,
+}"#
+        );
+
+        let kserd = Kserd::new(Value::Tuple(vec![]));
+        let nav = Navigator::new(&kserd);
+        let s = format!("{:#?}", nav.root());
+        println!("{}", s);
+        assert_eq!(
+            &s,
+            r#"Node {
+    id: None,
+    value-type: "Tuple",
+    index: 0,
+    parent: None,
+    is_key: false,
+    idx_in_parent: 0,
+}"#
+        );
+
+        let kserd = Kserd::new_cntr::<_, String>(vec![]).unwrap();
+        let nav = Navigator::new(&kserd);
+        let s = format!("{:#?}", nav.root());
+        println!("{}", s);
+        assert_eq!(
+            &s,
+            r#"Node {
+    id: None,
+    value-type: "Cntr",
+    index: 0,
+    parent: None,
+    is_key: false,
+    idx_in_parent: 0,
+}"#
+        );
+
+        let kserd = Kserd::new(Value::Seq(vec![]));
+        let nav = Navigator::new(&kserd);
+        let s = format!("{:#?}", nav.root());
+        println!("{}", s);
+        assert_eq!(
+            &s,
+            r#"Node {
+    id: None,
+    value-type: "Seq",
+    index: 0,
+    parent: None,
+    is_key: false,
+    idx_in_parent: 0,
+}"#
+        );
+
+        let kserd = Kserd::new_map(vec![]);
+        let nav = Navigator::new(&kserd);
+        let s = format!("{:#?}", nav.root());
+        println!("{}", s);
+        assert_eq!(
+            &s,
+            r#"Node {
+    id: None,
+    value-type: "Map",
+    index: 0,
+    parent: None,
+    is_key: false,
+    idx_in_parent: 0,
+}"#
+        );
+    }
+
+    #[test]
+    fn node_eq() {
+        let kserd = Kserd::new_unit();
+        let nav1 = Navigator::new(&kserd);
+        let root1 = nav1.root();
+        let root2 = nav1.root();
+        assert_eq!(root1, root2);
+        let nav2 = Navigator::new(&kserd);
+        let root3 = nav2.root();
+        assert_ne!(root1, root3);
+    }
+}

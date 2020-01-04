@@ -496,4 +496,118 @@ mod tests {
         assert!(f(NAN) != f(NEG_INFINITY));
         assert!(f(NAN) == f(NAN));
     }
+
+    #[test]
+    fn canonicalized_ordering() {
+        use std::f64::{INFINITY, NAN, NEG_INFINITY};
+
+        // use an ordered set
+        let mut set = std::collections::BTreeSet::new();
+
+        set.insert(Number::from(0));
+        set.insert((-0.0).into());
+        set.insert((-1.0).into());
+        set.insert(0.5.into());
+        set.insert(INFINITY.into());
+        set.insert((-100).into());
+        set.insert(NAN.into());
+        set.insert(NAN.into());
+        set.insert((-0.0).into());
+        set.insert(NEG_INFINITY.into());
+        set.insert(100.0.into());
+
+        let expected: Vec<Number> =
+            vec![NEG_INFINITY, -100.0, -1.0, 0.0, 0.5, 100.0, INFINITY, NAN]
+                .into_iter()
+                .map(Number::from)
+                .collect();
+
+        assert_eq!(set.into_iter().collect::<Vec<_>>(), expected);
+    }
+
+    #[test]
+    fn as_u128_test() {
+        use std::f64::{INFINITY, NAN, NEG_INFINITY};
+
+        // generally the conversion will work
+        assert_eq!(Number::from(100i32).as_u128(), Ok(100));
+        assert_eq!(Number::from(100.0).as_u128(), Ok(100));
+        // can also work if fractional part of float is smaller than valid amount
+        assert_eq!(Number::from(3.0 + 5e-11).as_u128(), Ok(3));
+        // can fail if outside
+        assert_eq!(Number::from(-100i32).as_u128(), Err(IntoIntError));
+        assert_eq!(Number::from(0.5).as_u128(), Err(IntoIntError));
+        assert_eq!(Number::from(INFINITY).as_u128(), Err(IntoIntError));
+        assert_eq!(Number::from(NEG_INFINITY).as_u128(), Err(IntoIntError));
+        assert_eq!(Number::from(NAN).as_u128(), Err(IntoIntError));
+    }
+
+    #[test]
+    fn partial_eq_and_comp_tests() {
+        macro_rules! tester {
+            ($( $x:ty ) +) => {{
+                $(
+                    let t: $x = 0;
+                    assert_eq!(Number::from(0u8), t);
+                    assert!(Number::from(-0.001) < t);
+                )*
+            }}
+        };
+        tester!(
+            isize i8 i16 i32 i64 i128
+            usize u8 u16 u32 u64 u128
+        );
+        assert_eq!(Number::from(0u8), 0.0f32);
+        assert_eq!(Number::from(0u8), 0.0f64);
+        assert!(Number::from(-0.001) < 0.0f32);
+        assert!(Number::from(-0.001) < 0.0f64);
+    }
+
+    #[test]
+    fn large_int_ordering() {
+        assert!(Number::from(128u128) > Number::from(-128i128));
+    }
+
+    #[test]
+    fn float_to_int_ordering() {
+        assert!(Number::from(128u128) > Number::from(-3.14));
+        assert!(Number::from(std::f64::INFINITY) > Number::from(std::u128::MAX));
+        assert!(Number::from(std::f64::NAN) > Number::from(std::u128::MAX));
+        assert!(Number::from(128u128) == Number::from(128.0));
+        assert!(Number::from(128u128) < Number::from(128.1));
+
+        assert!(Number::from(128i128) > Number::from(-3.14));
+        assert!(Number::from(std::f64::INFINITY) > Number::from(std::i128::MAX));
+        assert!(Number::from(std::f64::NAN) > Number::from(std::i128::MAX));
+        assert!(Number::from(128i128) == Number::from(128.0));
+        assert!(Number::from(128i128) < Number::from(128.1));
+    }
+
+    #[test]
+    fn eq_int_uint() {
+        assert_ne!(Number::from(-123), Number::from(123usize));
+        assert_eq!(Number::from(123isize), Number::from(123usize));
+    }
+
+    #[test]
+    fn float_to_int_cmp() {
+        use std::f64::{INFINITY, NAN, NEG_INFINITY};
+        use Ordering::*;
+
+        assert_eq!(Number::from(123u8).cmp(&Number::from(INFINITY)), Less);
+        assert_eq!(Number::from(123u8).cmp(&Number::from(NAN)), Less);
+        assert_eq!(Number::from(123u8).cmp(&Number::from(123f32)), Equal);
+        assert_eq!(
+            Number::from(123u8).cmp(&Number::from(NEG_INFINITY)),
+            Greater
+        );
+    }
+
+    #[test]
+    fn rev_ordering_test() {
+        use Ordering::*;
+        assert_eq!(rev_ordering(Less), Greater);
+        assert_eq!(rev_ordering(Greater), Less);
+        assert_eq!(rev_ordering(Equal), Equal);
+    }
 }

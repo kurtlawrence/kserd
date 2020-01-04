@@ -16,14 +16,14 @@ pub struct Kstr<'a> {
 
 impl<'a> Kstr<'a> {
     /// A new _borrowed_ string. `Kstr` has the same lifetime as the borrowed string.
-    pub fn brwed(s: &'a str) -> Self {
+    pub const fn brwed(s: &'a str) -> Self {
         Self {
             inner: Cow::Borrowed(s),
         }
     }
 
     /// A new _owned_ string. Takes ownership of the string and has a `'static` lifetime.
-    pub fn owned(s: String) -> Kstr<'static> {
+    pub const fn owned(s: String) -> Kstr<'static> {
         Kstr {
             inner: Cow::Owned(s),
         }
@@ -110,6 +110,12 @@ impl<'a> Debug for Kstr<'a> {
     }
 }
 
+impl<'a> PartialEq<str> for Kstr<'a> {
+    fn eq(&self, other: &str) -> bool {
+        self.as_str() == other
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,5 +134,25 @@ mod tests {
         let two = Kstr::brwed("Hello, world!");
 
         assert_eq!(set.contains(&two), true);
+    }
+
+    #[test]
+    fn to_mut_test() {
+        let mut kstr = Kstr::brwed("Hello");
+        assert_eq!(&kstr, "Hello");
+        kstr.to_mut().push_str(", world!");
+        assert_eq!(&kstr, "Hello, world!");
+    }
+
+    #[test]
+    fn as_ref_test() {
+        let kstr = Kstr::brwed("Hello, world!");
+        assert_eq!(kstr.as_ref(), "Hello, world!");
+    }
+
+    #[test]
+    fn display_test() {
+        let kstr = Kstr::brwed("Hello, world!");
+        assert_eq!(&kstr.to_string(), "Hello, world!");
     }
 }

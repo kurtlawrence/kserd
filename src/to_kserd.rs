@@ -148,6 +148,23 @@ fn test_kserd_to_kserd() {
     assert_eq!(kserd, kserdnew);
 }
 
+#[test]
+fn test_tokserderr_display() {
+    let e: ToKserdErr = Kserd::with_id(".", Value::Unit).unwrap_err().into();
+    assert_eq!(
+        &e.to_string(),
+        r#"identity '.' contains invalid characters. Invalid characters: '(){}[]<> ,./\='"#
+    );
+
+    let e: ToKserdErr = Value::new_cntr(vec![("/", Kserd::new_unit())])
+        .unwrap_err()
+        .into();
+    assert_eq!(
+        &e.to_string(),
+        r#"invalid field name: invalid character '/' exists in name '/'"#
+    );
+}
+
 // ********************* COPY-ABLE PRIMITIVES *********************************
 
 macro_rules! number {

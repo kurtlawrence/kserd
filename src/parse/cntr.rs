@@ -276,3 +276,53 @@ fn verbose_field_name_and_identity<'a, E: ParseError<&'a str>>(
         }
     })(i)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn kserdit<'a, K, V>(v: Vec<(K, V)>) -> impl Iterator<Item = (Kserd<'a>, Kserd<'a>)>
+    where
+        K: ToKserd<'a>,
+        V: ToKserd<'a>,
+    {
+        v.into_iter()
+            .map(|(k, v)| (k.into_kserd().unwrap(), v.into_kserd().unwrap()))
+    }
+
+    #[test]
+    fn verbose_cntr_map_entries() {
+        let s = r#"
+[[map-1]]
+"a":
+100
+
+[[map-1]]
+"b":
+200
+
+[[map-2]]
+(1,2):
+(
+    3
+    4
+)
+
+[[map-2]]
+(5,6):
+(7,8)
+"#;
+        let expected = Kserd::new_cntr(vec![
+            (
+                "map-1",
+                Kserd::new_map(kserdit(vec![("a", 100), ("b", 200)])),
+            ),
+            (
+                "map-2",
+                Kserd::new_map(kserdit(vec![((1, 2), (3, 4)), ((5, 6), (7, 8))])),
+            ),
+        ])
+        .unwrap();
+        assert_eq!(parse(s), Ok(expected));
+    }
+}
