@@ -6,6 +6,9 @@ cargo +stable fmt
 # Check formatting
 cargo +stable fmt -- --check
 
+# Check clippy
+cargo clippy --all-targets --all-features -- -D warnings -D clippy::pedantic
+
 # Check feature builds
 cargo check
 cargo check --all-features
