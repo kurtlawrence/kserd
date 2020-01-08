@@ -51,7 +51,7 @@ fn concise_cntr_kserds<'a, E: ParseError<&'a str>>(
     )(i)
 }
 
-pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
+pub fn delimited<'a, E: ParseError<&'a str>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     use std::iter::FromIterator;

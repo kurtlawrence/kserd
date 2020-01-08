@@ -146,9 +146,9 @@ mod tuples;
 
 pub use self::formatter::{FmtError, Formatter};
 
-const FIELDS_ASSIGNER: &'static str = " =";
-const FIELDS_SEPARATOR: &'static str = ", ";
-const KEYS_ASSIGNER: &'static str = ":";
+const FIELDS_ASSIGNER: &str = " =";
+const FIELDS_SEPARATOR: &str = ", ";
+const KEYS_ASSIGNER: &str = ":";
 /// The number of spaces an indent is worth.
 const INDENT: usize = 4;
 

@@ -1,5 +1,6 @@
 #![cfg(feature = "encode")]
 use kserd::*;
+use std::f32::consts::PI;
 
 #[test]
 fn eq_unit() {
@@ -108,8 +109,8 @@ fn eq_float() {
     t!(f64);
 
     // edge case where 3.14f32 as f64 != 3.14f64
-    let kserd = Kserd::enc(&3.14f32).unwrap();
-    assert_eq!(kserd.float(), Some(3.14));
+    let kserd = Kserd::enc(&1.2345678f32).unwrap();
+    assert_eq!(kserd.float(), Some(1.2345678));
 
     // inifities and nans work
     let kserd = Kserd::new_num(std::f32::INFINITY);

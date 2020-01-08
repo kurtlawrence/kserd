@@ -8,7 +8,6 @@ mod prims;
 mod wsp;
 
 use super::*;
-use cntr::*;
 use heuristics::*;
 use list::*;
 use names::*;
@@ -72,7 +71,7 @@ fn kserd_delimited<'a, E: ParseError<&'a str>>(
 
         match pat {
             Nonprim::Tuple => tuple(force_inline)(i),
-            Nonprim::Cntr => cntr_delimited(force_inline)(i),
+            Nonprim::Cntr => cntr::delimited(force_inline)(i),
             Nonprim::Seq => seq_delimited(force_inline)(i),
             Nonprim::Map => map::delimited(force_inline)(i),
             Nonprim::None => prim(i),
