@@ -272,7 +272,7 @@ impl<'a> Kserd<'a> {
     /// The identity. Same as the `.id` field but mapped as a `&str`.
     ///
     /// # Example
-    ///	```rust
+    /// ```rust
     /// # use kserd::*;
     /// let kserd = Kserd::with_id("Hello", Value::Unit).unwrap();
     /// assert_eq!(kserd.id(), Some("Hello"));

@@ -165,7 +165,7 @@ fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<
 ///
 /// [`Kserd`]: crate::Kserd
 /// [`Error`]: Error
-pub fn parse<'a>(s: &'a str) -> Result<Kserd<'a>, Error<'a>> {
+pub fn parse(s: &str) -> Result<Kserd, Error> {
     kserd_root::<nom::error::VerboseError<_>>(s)
         .map(|x| x.1)
         .map_err(|e| match e {

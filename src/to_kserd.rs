@@ -208,8 +208,8 @@ impl ToKserd<'static> for char {
 
 #[test]
 fn test_copyable_primitives() {
-    assert_eq!(123456.into_kserd(), Ok(Kserd::new_num(123456)));
-    assert_eq!((-1234567).into_kserd(), Ok(Kserd::new_num(-1234567)));
+    assert_eq!(123_456.into_kserd(), Ok(Kserd::new_num(123_456)));
+    assert_eq!((-1_234_567).into_kserd(), Ok(Kserd::new_num(-1_234_567)));
     assert_eq!(3.14.into_kserd(), Ok(Kserd::new_num(3.14)));
     assert_eq!(().into_kserd(), Ok(Kserd::new_unit()));
     assert_eq!(true.into_kserd(), Ok(Kserd::new_bool(true)));

@@ -129,6 +129,7 @@ fn fmt_ch() {
 
 #[test]
 fn fmt_float() {
+    #[allow(clippy::approx_constant)]
     let kserd = Kserd::enc(&3.14f32).unwrap();
 
     let with_ident = FormattingConfig {
@@ -398,7 +399,6 @@ b = (
         id_on_maps: false,
         id_on_seqs: false,
         width_limit: Some(16),
-        ..Default::default()
     };
 
     let s = kserd.as_str_with_config(config);
@@ -475,7 +475,6 @@ fn fmt_map() {
         id_on_maps: false,
         id_on_seqs: false,
         width_limit: None,
-        ..Default::default()
     };
 
     let s = kserd.as_str_with_config(config);
@@ -596,7 +595,6 @@ fn map_as_root() {
         id_on_maps: false,
         id_on_seqs: false,
         width_limit: None,
-        ..Default::default()
     };
 
     assert_eq!(

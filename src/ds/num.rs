@@ -110,7 +110,7 @@ impl Number {
     /// ```rust
     /// # use kserd::*;
     /// use kserd::ds::IntoIntError;
-    ///	use std::f64::{INFINITY, NEG_INFINITY, NAN};
+    /// use std::f64::{INFINITY, NEG_INFINITY, NAN};
     ///
     /// // generally the conversion will work
     /// assert_eq!(Number::from(100i32).as_u128(), Ok(100));
@@ -144,7 +144,7 @@ impl Number {
     /// ```rust
     /// # use kserd::*;
     /// use kserd::ds::IntoIntError;
-    ///	use std::f64::{INFINITY, NEG_INFINITY, NAN};
+    /// use std::f64::{INFINITY, NEG_INFINITY, NAN};
     ///
     /// // generally the conversion will work
     /// assert_eq!(Number::from(100u32).as_i128(), Ok(100));

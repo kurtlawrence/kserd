@@ -272,7 +272,7 @@ impl<'a> Value<'a> {
     /// `Value` is a boolean value. Can be altered.
     ///
     /// # Example
-    ///	```rust
+    /// ```rust
     /// # use kserd::*;
     /// let mut value = Value::Bool(false);
     /// value.bool_mut().map(|x| *x = true);
@@ -340,7 +340,7 @@ impl<'a> Value<'a> {
     /// # Example
     /// ```rust
     /// # use kserd::*;
-    ///	let value = Value::new_num(-3.14);
+    /// let value = Value::new_num(-3.14);
     /// assert_eq!(value.float(), Some(-3.14));
     /// ```
     pub fn float(&self) -> Option<f64> {
@@ -388,7 +388,7 @@ impl<'a> Value<'a> {
     /// # Example
     /// ```rust
     /// # use kserd::*;
-    ///	let mut value = Value::new_str("Hello");
+    /// let mut value = Value::new_str("Hello");
     /// value.str_mut().map(|x| { x.push_str(", world!"); });
     /// assert_eq!(value.str(), Some("Hello, world!"));
     /// ```
