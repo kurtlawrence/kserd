@@ -96,7 +96,7 @@ fn kserd_nested<'a, E: ParseError<&'a str>>(
 
         if verbose {
             // verbose can only be a Container type!
-            verbose_cntr(indents)(i)
+            cntr::verbose(indents)(i)
         } else {
             ignore_inline_whitespace(kserd_concise)(i)
         }

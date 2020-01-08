@@ -102,7 +102,7 @@ pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
 ///
 /// `indents` is in number of _indents_ that is expected to be inside _this_ Container.
 /// An _indent_ is 4 consectutive spaces, or a single tab character.
-pub fn verbose_cntr<'a, E: ParseError<&'a str>>(
+pub fn verbose<'a, E: ParseError<&'a str>>(
     indents: usize,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
