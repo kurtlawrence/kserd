@@ -54,6 +54,7 @@ fn concise_cntr_kserds<'a, E: ParseError<&'a str>>(
 pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
+    use std::iter::FromIterator;
     move |i: &'a str| {
         let (i, ident) = opt(ident(false))(i)?;
 
@@ -79,7 +80,6 @@ pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
             cut(terminated(parser, ignore_inline_whitespace(char(')')))),
         )(i)?;
 
-        use std::iter::FromIterator;
         let value = Value::Cntr(BTreeMap::from_iter(value));
 
         Ok((i, kserd_ctor(ident, value)))

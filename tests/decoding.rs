@@ -4,6 +4,8 @@ extern crate serde_derive;
 
 use kserd::*;
 use std::collections::HashMap;
+use std::f32::consts::PI as PI32;
+use std::f64::consts::PI as PI64;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct UnitStruct;
@@ -64,12 +66,12 @@ fn tuples() {
     let r = kserd.decode::<(u8,)>();
     assert_eq!(r, Ok(t));
 
-    let t = (1, "hello", -3.14);
+    let t = (1, "hello", -PI32);
     let kserd = Kserd::enc(&t).unwrap();
     let r = kserd.mk_brw().decode::<(u8, &str, f32)>();
     assert_eq!(r, Ok(t));
 
-    let t = TupleStruct(1, "hello", -3.14);
+    let t = TupleStruct(1, "hello", -PI32);
     let kserd = Kserd::enc(&t).unwrap();
     dbg!(&kserd);
     let r = kserd.mk_brw().decode::<TupleStruct>();
@@ -90,7 +92,7 @@ struct SomeStruct {
 fn structs() {
     let s = SomeStruct {
         n: -100,
-        f: 3.14,
+        f: PI64,
         s: "Hello, world!".to_string(),
         ns: None,
         u: (),
@@ -103,11 +105,11 @@ fn structs() {
 
     let s = SomeStruct {
         n: 10101,
-        f: 3.14,
+        f: PI64,
         s: "".to_string(),
         ns: Some(Box::new(SomeStruct {
             n: -100,
-            f: 3.14,
+            f: PI64,
             s: "Hello, world!".to_string(),
             ns: None,
             u: (),
@@ -154,7 +156,7 @@ fn newtype_enum_variant() {
 
 #[test]
 fn tuple_enum_variant() {
-    let e = Enum::Tuple(120, -100, 3.14);
+    let e = Enum::Tuple(120, -100, PI64);
     let kserd = Kserd::enc(&e).unwrap();
     dbg!(&kserd);
     println!("{}", kserd.as_str());
@@ -167,7 +169,7 @@ fn struct_enum_variant() {
     let e = Enum::Struct {
         a: 120,
         b: "Hello, world!".to_string(),
-        c: -3.14,
+        c: -PI64,
     };
     let kserd = Kserd::enc(&e).unwrap();
     dbg!(&kserd);
