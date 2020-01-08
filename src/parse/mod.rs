@@ -11,7 +11,6 @@ use super::*;
 use cntr::*;
 use heuristics::*;
 use list::*;
-use map::*;
 use names::*;
 use nom::{
     branch::alt,
@@ -75,7 +74,7 @@ fn kserd_delimited<'a, E: ParseError<&'a str>>(
             Nonprim::Tuple => tuple(force_inline)(i),
             Nonprim::Cntr => cntr_delimited(force_inline)(i),
             Nonprim::Seq => seq_delimited(force_inline)(i),
-            Nonprim::Map => map_delimited(force_inline)(i),
+            Nonprim::Map => map::delimited(force_inline)(i),
             Nonprim::None => prim(i),
         }
     }

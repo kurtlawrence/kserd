@@ -74,7 +74,10 @@ pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
             "inline container"
         };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char(')')))))(i)?;
+        let (i, value) = context(
+            ctx,
+            cut(terminated(parser, ignore_inline_whitespace(char(')')))),
+        )(i)?;
 
         use std::iter::FromIterator;
         let value = Value::Cntr(BTreeMap::from_iter(value));
@@ -184,9 +187,9 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
 
         let (i, _) = expect_indents(indents)(i)?;
 
-        let (i, _) = inline_wsp(i)?; // passed the indent threshold, ignore any extra inline space
-                                     // the thinking is it won't affect parsing, but could affect formatting
-                                     // hopefully can write a formatter to prettify it.
+        let (i, _) = inline_whitespace(i)?; // passed the indent threshold, ignore any extra inline space
+                                            // the thinking is it won't affect parsing, but could affect formatting
+                                            // hopefully can write a formatter to prettify it.
 
         if recognise_field_assign(i) {
             let (i, (fname, val)) = kvp_kserdstr_to_kserd(false)(i)?;

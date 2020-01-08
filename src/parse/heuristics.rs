@@ -77,13 +77,19 @@ pub fn pattern_match_verbose<'a, E: ParseError<&'a str>>(
     let is = is
         || preceded::<_, _, _, (), _, _>(
             char('['),
-            terminated(ignore_inline_whitespace(valid_name), ignore_inline_whitespace(char(']'))),
+            terminated(
+                ignore_inline_whitespace(valid_name),
+                ignore_inline_whitespace(char(']')),
+            ),
         )(i)
         .is_ok();
     let is = is
         || preceded::<_, _, _, (), _, _>(
             tag("[["),
-            terminated(ignore_inline_whitespace(valid_name), ignore_inline_whitespace(tag("]]"))),
+            terminated(
+                ignore_inline_whitespace(valid_name),
+                ignore_inline_whitespace(tag("]]")),
+            ),
         )(i)
         .is_ok();
 
@@ -104,7 +110,7 @@ pub fn recognise_concise(i: &str) -> bool {
 
 /// Recognises the sequence: `field_name =`.
 pub fn recognise_field_assign(i: &str) -> bool {
-    preceded::<_, _, _, (), _, _>(field_name, terminated(inline_wsp, char('=')))(i).is_ok()
+    preceded::<_, _, _, (), _, _>(field_name, terminated(inline_whitespace, char('=')))(i).is_ok()
 }
 
 #[cfg(test)]

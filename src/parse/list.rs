@@ -24,7 +24,10 @@ fn concise_list_kserds<'a, E: ParseError<&'a str>>(
         "newline separated (concise) kserds",
         preceded(
             multiline_whitespace,
-            terminated(separated_list(multiline_whitespace, kserd_concise), multiline_whitespace),
+            terminated(
+                separated_list(multiline_whitespace, kserd_concise),
+                multiline_whitespace,
+            ),
         ),
     )(i)
 }
@@ -55,7 +58,10 @@ pub fn tuple<'a, E: ParseError<&'a str>>(
             "inline tuple"
         };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char(')')))))(i)?;
+        let (i, value) = context(
+            ctx,
+            cut(terminated(parser, ignore_inline_whitespace(char(')')))),
+        )(i)?;
 
         let value = Value::Tuple(value);
 
@@ -89,7 +95,10 @@ pub fn seq_delimited<'a, E: ParseError<&'a str>>(
             "inline sequence"
         };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char(']')))))(i)?;
+        let (i, value) = context(
+            ctx,
+            cut(terminated(parser, ignore_inline_whitespace(char(']')))),
+        )(i)?;
 
         let value = Value::Seq(value);
 

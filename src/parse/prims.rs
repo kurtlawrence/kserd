@@ -11,7 +11,7 @@ pub fn unit_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, ()
     context(
         "unit value",
         map(
-            preceded(char('('), cut(terminated(inline_wsp, char(')')))),
+            preceded(char('('), cut(terminated(inline_whitespace, char(')')))),
             |_| (),
         ),
     )(i)
@@ -148,7 +148,7 @@ fn prim_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Value<
 pub fn prim<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
     let (i, (ident, value)) = context(
         "primitive",
-        separated_pair(opt(ident(true)), inline_wsp, prim_value),
+        separated_pair(opt(ident(true)), inline_whitespace, prim_value),
     )(i)?;
 
     let kserd = if let Some(ident) = ident {
@@ -236,7 +236,7 @@ mod tests {
             &[0, 1, 2, 5, 10, 20, 50, 100, 110, 120, 150, 200, 210, 220, 250]
         );
 
-        let all = (0..255u8).into_iter().collect::<Vec<u8>>();
+        let all = (0..255_u8).into_iter().collect::<Vec<u8>>();
 
         test_parse_barr!(&all);
 

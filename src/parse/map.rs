@@ -54,7 +54,7 @@ fn concise_map_kserds<'a, E: ParseError<&'a str>>(
 /// Parse as a sequence. Will `Fail` if delimited by opening brace `{`.
 /// Tries to determine if the stream is in `Concise` or `Inline` format using
 /// simple heuristics. The decision can be overridden by forcing `Inline` format.
-pub fn map_delimited<'a, E: ParseError<&'a str>>(
+pub fn delimited<'a, E: ParseError<&'a str>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
@@ -73,7 +73,10 @@ pub fn map_delimited<'a, E: ParseError<&'a str>>(
 
         let ctx = if concise { "concise map" } else { "inline map" };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char('}')))))(i)?;
+        let (i, value) = context(
+            ctx,
+            cut(terminated(parser, ignore_inline_whitespace(char('}')))),
+        )(i)?;
 
         let value = Value::Map(value.into_iter().collect());
 
