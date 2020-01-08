@@ -3,7 +3,7 @@ use nom::error::VerboseError;
 use std::collections::BTreeMap;
 use std::fmt;
 
-impl<'a> ParseErr<'a> {
+impl<'a> Error<'a> {
     pub(super) fn new(src: &'a str, verr: VerboseError<&'a str>) -> Self {
         Self {
             errs: verr
@@ -108,7 +108,7 @@ impl<'a> ParseErr<'a> {
     }
 }
 
-impl<'a> fmt::Debug for ParseErr<'a> {
+impl<'a> fmt::Debug for Error<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.backtrace())
     }

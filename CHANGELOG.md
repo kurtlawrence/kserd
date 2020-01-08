@@ -1,4 +1,7 @@
 
+# Version
+- Rename `ParseErr` to `Error`
+
 # 0.2.0
 - Remove `From<String>` impl for `ToKserdErr`
 - Cleaned up error handling

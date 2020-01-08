@@ -36,7 +36,7 @@ use wsp::*;
 /// locations where errors originate from. `ParseErr` holds this hierarchy and can provide traces
 /// and a backtrace string to better understand the error.
 #[derive(PartialEq)]
-pub struct ParseErr<'a> {
+pub struct Error<'a> {
     /// Format `(offset, error_kind)`.
     errs: Vec<(usize, VerboseErrorKind)>,
     /// Format `(line_offset, (line_idx, line))`.
@@ -166,15 +166,13 @@ fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<
 /// ```
 ///
 /// [`Kserd`]: crate::Kserd
-/// [`ParseErr`]: ParseErr
-pub fn parse<'a>(s: &'a str) -> Result<Kserd<'a>, ParseErr<'a>> {
-    use nom::Err::*;
-
+/// [`Error`]: Error
+pub fn parse<'a>(s: &'a str) -> Result<Kserd<'a>, Error<'a>> {
     kserd_root::<nom::error::VerboseError<_>>(s)
         .map(|x| x.1)
         .map_err(|e| match e {
-            Error(x) | Failure(x) => ParseErr::new(s, x),
-            Incomplete(_) => {
+            Err::Error(x) | Err::Failure(x) => Error::new(s, x),
+            Err::Incomplete(_) => {
                 unreachable!("all parsers use complete versions so no incomplete possible")
             }
         })
