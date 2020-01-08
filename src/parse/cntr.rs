@@ -15,8 +15,8 @@ fn kvp_kserdstr_to_kserd<'a, E: ParseError<&'a str>>(
             "kserdstr-kserd key-value pair",
             separated_pair(
                 field_name,
-                ignore_inline_wsp(char('=')),
-                cut(ignore_inline_wsp(value_parser)),
+                ignore_inline_whitespace(char('=')),
+                cut(ignore_inline_whitespace(value_parser)),
             ),
         )(input)
     }
@@ -29,8 +29,8 @@ fn inline_cntr_kserds<'a, E: ParseError<&'a str>>(
     context(
         "comma separated kserdstr-kserd pair",
         separated_list(
-            ignore_inline_wsp(char(',')),
-            ignore_inline_wsp(kvp_kserdstr_to_kserd(true)),
+            ignore_inline_whitespace(char(',')),
+            ignore_inline_whitespace(kvp_kserdstr_to_kserd(true)),
         ),
     )(i)
 }
@@ -42,10 +42,10 @@ fn concise_cntr_kserds<'a, E: ParseError<&'a str>>(
     context(
         "newline separated (concise) kserdstr-kserd pair",
         preceded(
-            multiline_wsp,
+            multiline_whitespace,
             terminated(
-                separated_list(multiline_wsp, kvp_kserdstr_to_kserd(false)),
-                multiline_wsp,
+                separated_list(multiline_whitespace, kvp_kserdstr_to_kserd(false)),
+                multiline_whitespace,
             ),
         ),
     )(i)
@@ -57,7 +57,7 @@ pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
     move |i: &'a str| {
         let (i, ident) = opt(ident(false))(i)?;
 
-        let (i, _) = ignore_inline_wsp(char('('))(i)?; // open with paren
+        let (i, _) = ignore_inline_whitespace(char('('))(i)?; // open with paren
 
         // we manually work out if should be treating as inline or concise
         let concise = recognise_concise(i) && !force_inline;
@@ -74,7 +74,7 @@ pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
             "inline container"
         };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_wsp(char(')')))))(i)?;
+        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char(')')))))(i)?;
 
         use std::iter::FromIterator;
         let value = Value::Cntr(BTreeMap::from_iter(value));
@@ -168,7 +168,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
         let i = {
             let mut tmp = i;
             loop {
-                let (n, yes) = opt(ignore_inline_wsp(line_ending))(tmp)?;
+                let (n, yes) = opt(ignore_inline_whitespace(line_ending))(tmp)?;
                 if yes.is_some() {
                     tmp = n; // nothing but net
                 } else {
@@ -196,14 +196,14 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                 tag("[["),
                 cut(terminated(verbose_field_name_and_identity, tag("]]"))),
             )(i)?;
-            let (i, _) = ignore_inline_wsp(line_ending)(i)?; // must be a new line after a field name [[]]
+            let (i, _) = ignore_inline_whitespace(line_ending)(i)?; // must be a new line after a field name [[]]
 
             // now work out if it is a map or just sequence.
             // a map as the usual inline kserd, followed by the colon.
 
             let (i, key) = match terminated::<_, _, _, (), _, _>(
-                terminated(kserd_inline, ignore_inline_wsp(char(':'))),
-                ignore_inline_wsp(line_ending),
+                terminated(kserd_inline, ignore_inline_whitespace(char(':'))),
+                ignore_inline_whitespace(line_ending),
             )(i)
             {
                 Ok((ii, key)) => (ii, Some(key)),
@@ -235,7 +235,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                 tag("["),
                 cut(terminated(verbose_field_name_and_identity, tag("]"))),
             )(i)?;
-            let (i, _) = ignore_inline_wsp(line_ending)(i)?; // must be a new line after a field name []
+            let (i, _) = ignore_inline_whitespace(line_ending)(i)?; // must be a new line after a field name []
             let (i, mut value) = context("nested container", cut(kserd_nested(indents + 1)))(i)?;
             value.id = identity;
 

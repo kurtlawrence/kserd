@@ -15,8 +15,8 @@ fn kvp_kserd_to_kserd<'a, E: ParseError<&'a str>>(
             "kserd-kserd key-value pair",
             separated_pair(
                 alt((kserd_concise, kserd_inline)),
-                ignore_inline_wsp(char(':')),
-                ignore_inline_wsp(value_parser),
+                ignore_inline_whitespace(char(':')),
+                ignore_inline_whitespace(value_parser),
             ),
         )(input)
     }
@@ -29,8 +29,8 @@ fn inline_map_kserds<'a, E: ParseError<&'a str>>(
     context(
         "comma separated kserd-kserd pair",
         separated_list(
-            ignore_inline_wsp(char(',')),
-            ignore_inline_wsp(kvp_kserd_to_kserd(true)),
+            ignore_inline_whitespace(char(',')),
+            ignore_inline_whitespace(kvp_kserd_to_kserd(true)),
         ),
     )(i)
 }
@@ -42,10 +42,10 @@ fn concise_map_kserds<'a, E: ParseError<&'a str>>(
     context(
         "newline separated (concise) kserd-kserd pair",
         preceded(
-            multiline_wsp,
+            multiline_whitespace,
             terminated(
-                separated_list(multiline_wsp, kvp_kserd_to_kserd(false)),
-                multiline_wsp,
+                separated_list(multiline_whitespace, kvp_kserd_to_kserd(false)),
+                multiline_whitespace,
             ),
         ),
     )(i)
@@ -60,7 +60,7 @@ pub fn map_delimited<'a, E: ParseError<&'a str>>(
     move |i: &'a str| {
         let (i, ident) = opt(ident(false))(i)?;
 
-        let (i, _) = ignore_inline_wsp(char('{'))(i)?; // open with bracket
+        let (i, _) = ignore_inline_whitespace(char('{'))(i)?; // open with bracket
 
         // we manually work out if should be treating as inline or concise
         let concise = recognise_concise(i) && !force_inline;
@@ -73,7 +73,7 @@ pub fn map_delimited<'a, E: ParseError<&'a str>>(
 
         let ctx = if concise { "concise map" } else { "inline map" };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_wsp(char('}')))))(i)?;
+        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char('}')))))(i)?;
 
         let value = Value::Map(value.into_iter().collect());
 

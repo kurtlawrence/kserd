@@ -34,7 +34,7 @@ pub fn pattern_match_delimited<'a, E: ParseError<&'a str>>(
         }
     };
 
-    let (i, _) = multiline_wsp(i)?;
+    let (i, _) = multiline_whitespace(i)?;
     let next = i.chars().next().unwrap_or(' ');
 
     let mut r = if next == '[' {
@@ -45,7 +45,7 @@ pub fn pattern_match_delimited<'a, E: ParseError<&'a str>>(
         // opening of tuple or container
         if (ident_ == Ident::None || ident_ == Ident::Prim) && unit_value::<E>(i).is_ok() {
             Nonprim::None // a unit value, not a tuple. Can't be named, or would be an empty tuple
-        } else if recognise_field_assign(multiline_wsp(&i[1..])?.0) {
+        } else if recognise_field_assign(multiline_whitespace(&i[1..])?.0) {
             Nonprim::Cntr
         } else {
             Nonprim::Tuple
@@ -66,7 +66,7 @@ pub fn pattern_match_delimited<'a, E: ParseError<&'a str>>(
 pub fn pattern_match_verbose<'a, E: ParseError<&'a str>>(
     orig: &'a str,
 ) -> IResult<&'a str, bool, E> {
-    let (i, _) = multiline_wsp(orig)?; // ignore _all_ whitespace before hand
+    let (i, _) = multiline_whitespace(orig)?; // ignore _all_ whitespace before hand
 
     // generally a Verbose format can be recognised by:
     // - A direct mapping (var_name = xxx)
@@ -77,13 +77,13 @@ pub fn pattern_match_verbose<'a, E: ParseError<&'a str>>(
     let is = is
         || preceded::<_, _, _, (), _, _>(
             char('['),
-            terminated(ignore_inline_wsp(valid_name), ignore_inline_wsp(char(']'))),
+            terminated(ignore_inline_whitespace(valid_name), ignore_inline_whitespace(char(']'))),
         )(i)
         .is_ok();
     let is = is
         || preceded::<_, _, _, (), _, _>(
             tag("[["),
-            terminated(ignore_inline_wsp(valid_name), ignore_inline_wsp(tag("]]"))),
+            terminated(ignore_inline_whitespace(valid_name), ignore_inline_whitespace(tag("]]"))),
         )(i)
         .is_ok();
 

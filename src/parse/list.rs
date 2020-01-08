@@ -6,8 +6,8 @@ fn inline_list_kserds<'a, E: ParseError<&'a str>>(
     context(
         "comma separated kserds",
         separated_list(
-            ignore_inline_wsp(char(',')),
-            ignore_inline_wsp(kserd_inline),
+            ignore_inline_whitespace(char(',')),
+            ignore_inline_whitespace(kserd_inline),
         ),
     )(i)
 }
@@ -23,8 +23,8 @@ fn concise_list_kserds<'a, E: ParseError<&'a str>>(
     context(
         "newline separated (concise) kserds",
         preceded(
-            multiline_wsp,
-            terminated(separated_list(multiline_wsp, kserd_concise), multiline_wsp),
+            multiline_whitespace,
+            terminated(separated_list(multiline_whitespace, kserd_concise), multiline_whitespace),
         ),
     )(i)
 }
@@ -38,7 +38,7 @@ pub fn tuple<'a, E: ParseError<&'a str>>(
     move |i: &'a str| {
         let (i, ident) = opt(ident(true))(i)?;
 
-        let (i, _) = ignore_inline_wsp(char('('))(i)?; // open with paren
+        let (i, _) = ignore_inline_whitespace(char('('))(i)?; // open with paren
 
         // we manually work out if should be treating as inline or concise
         let concise = recognise_concise(i) && !force_inline;
@@ -55,7 +55,7 @@ pub fn tuple<'a, E: ParseError<&'a str>>(
             "inline tuple"
         };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_wsp(char(')')))))(i)?;
+        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char(')')))))(i)?;
 
         let value = Value::Tuple(value);
 
@@ -72,7 +72,7 @@ pub fn seq_delimited<'a, E: ParseError<&'a str>>(
     move |i: &'a str| {
         let (i, ident) = opt(ident(false))(i)?;
 
-        let (i, _) = ignore_inline_wsp(char('['))(i)?; // open with bracket
+        let (i, _) = ignore_inline_whitespace(char('['))(i)?; // open with bracket
 
         // we manually work out if should be treating as inline or concise
         let concise = recognise_concise(i) && !force_inline;
@@ -89,7 +89,7 @@ pub fn seq_delimited<'a, E: ParseError<&'a str>>(
             "inline sequence"
         };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_wsp(char(']')))))(i)?;
+        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_whitespace(char(']')))))(i)?;
 
         let value = Value::Seq(value);
 

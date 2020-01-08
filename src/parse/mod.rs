@@ -99,13 +99,13 @@ fn kserd_nested<'a, E: ParseError<&'a str>>(
             // verbose can only be a Container type!
             verbose_cntr(indents)(i)
         } else {
-            ignore_inline_wsp(kserd_concise)(i)
+            ignore_inline_whitespace(kserd_concise)(i)
         }
     }
 }
 
 fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
-    all_consuming(terminated(kserd_nested(0), multiline_wsp))(i)
+    all_consuming(terminated(kserd_nested(0), multiline_whitespace))(i)
 }
 
 /// Attemp to parse a string into a [`Kserd`] object.
