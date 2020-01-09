@@ -56,6 +56,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::all)]
     fn tuple_fmting() {
         let kserd = Kserd::with_id(
             "hello",

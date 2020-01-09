@@ -88,6 +88,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::all)]
     fn seq_fmting() {
         let kserd = Kserd::with_id(
             "hello",

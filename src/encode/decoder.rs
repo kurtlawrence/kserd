@@ -390,6 +390,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::all)]
     fn mem_de_round_trips() {
         macro_rules! round_trip_test {
 	    ($t:ty, $($x:expr),*) => {{
@@ -565,20 +566,20 @@ mod tests {
             }
         }
 
-        let kserd = Kserd::new_num(3.14);
+        let kserd = Kserd::new_num(1.01);
         let r = kserd.decode::<Dummy>().map_err(|e| e.to_string());
         assert_eq!(
             r,
-            Err("custom error: invalid type: floating point `3.14`, expected char".into())
+            Err("custom error: invalid type: floating point `1.01`, expected char".into())
         );
 
-        let kserd = Kserd::new_num(3.14);
+        let kserd = Kserd::new_num(1.01);
         let r = Decoder(kserd)
             .deserialize_char(NoImplementVisitor)
             .map_err(|e| e.to_string());
         assert_eq!(
             r,
-            Err("custom error: invalid type: floating point `3.14`, expected char".into())
+            Err("custom error: invalid type: floating point `1.01`, expected char".into())
         );
     }
 
@@ -666,7 +667,7 @@ mod tests {
         test!(Kserd::new_bool(true), "boolean `true`");
         test!(Kserd::new_num(123u8), "integer `123`");
         test!(Kserd::new_num(-123i8), "integer `-123`");
-        test!(Kserd::new_num(3.14), "floating point `3.14`");
+        test!(Kserd::new_num(1.01), "floating point `1.01`");
         test!(Kserd::new_str("Hello"), "string \"Hello\"");
         test!(Kserd::new_barr([0, 1, 2].as_ref()), "byte array");
         // handle tuple outside

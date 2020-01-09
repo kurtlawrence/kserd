@@ -332,7 +332,9 @@ impl<'a, 'k> Formatter<'a, 'k> {
 
         let repr = validate_requst_repr(max, parent, requested)?;
 
-        self.fmts.get_mut(idx).map(|x| x.line = repr);
+        if let Some(x) = self.fmts.get_mut(idx) {
+            x.line = repr;
+        }
 
         for d in node.descendants_depth() {
             let current = self.fmts.get_mut(d.index()).unwrap();
@@ -555,7 +557,7 @@ mod tests {
         let kserd = Kserd::new(Value::Tuple(vec![
             Kserd::new_unit(),
             Kserd::new(Value::Seq(vec![
-                Kserd::new_num(3.14),
+                Kserd::new_num(1.01),
                 Kserd::new_str("Hello, world!"),
             ])),
             Kserd::new_num(10101),
@@ -577,7 +579,7 @@ mod tests {
 
         let kserd = Kserd::new_cntr(vec![
             // Verbose
-            ("a", Kserd::new_num(3.14)), // Inline
+            ("a", Kserd::new_num(1.01)), // Inline
             ("b", Kserd::new(Value::Seq(vec![Kserd::new_num(1)]))), // Verbose, Inline
         ])
         .unwrap();

@@ -122,6 +122,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::all)]
     fn cntr_fmting() {
         let kserd = Kserd::with_id(
             "Struct",

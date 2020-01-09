@@ -118,8 +118,6 @@ mod tests {
     use super::*;
     use nom::error::VerboseError;
 
-    #[test]
-    fn test_pattern_matching() {
         macro_rules! test {
 		( $ex:expr, $($x:literal ),* ) => {{
 			$(
@@ -129,6 +127,8 @@ mod tests {
 		}};
 	}
 
+    #[test]
+    fn test_pat_match_none() {
         test!(
             Nonprim::None,
             "123456",
@@ -141,7 +141,10 @@ mod tests {
             "false",
             "b91':C!WEH#L4R'"
         );
+    }
 
+    #[test]
+    fn test_pat_match_seq() {
         test!(
             Nonprim::Seq,
             "[1,2,3]",
@@ -151,7 +154,10 @@ mod tests {
             "Hello[1,2,3]",
             "Hello[\n1,2,3\n]"
         );
+    }
 
+    #[test]
+    fn test_pat_match_map() {
         test!(
             Nonprim::Map,
             "{1:2, 3:4, 5:6}",
@@ -161,7 +167,10 @@ mod tests {
             "Hello{1:2, 3:4, 5:6}",
             "Hello{\n1:2\n3:4\n5:6\n}"
         );
+    }
 
+    #[test]
+    fn test_pat_match_tuple() {
         test!(
             Nonprim::Tuple,
             "(1,2,3)",
@@ -171,7 +180,10 @@ mod tests {
             "Hello(1,2,3)",
             "Hello(\n1,2,3\n)"
         );
+    }
 
+    #[test]
+    fn test_pat_match_cntr() {
         test!(
             Nonprim::Cntr,
             "(a=1, 2, 3)",

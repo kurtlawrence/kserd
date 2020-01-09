@@ -236,7 +236,7 @@ mod tests {
             &[0, 1, 2, 5, 10, 20, 50, 100, 110, 120, 150, 200, 210, 220, 250]
         );
 
-        let all = (0..255_u8).into_iter().collect::<Vec<u8>>();
+        let all = (0..255_u8).collect::<Vec<u8>>();
 
         test_parse_barr!(&all);
 

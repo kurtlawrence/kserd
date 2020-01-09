@@ -121,7 +121,7 @@ pub fn verbose<'a, E: ParseError<&'a str>>(
                     rfields.insert(name, value);
                 }
                 ContainerField::SeqEntry(name, value) => {
-                    seqs.entry(name).or_insert(Vec::new()).push(value);
+                    seqs.entry(name).or_insert_with(Vec::new).push(value);
                 }
                 ContainerField::MapEntry {
                     field_name,
@@ -129,7 +129,7 @@ pub fn verbose<'a, E: ParseError<&'a str>>(
                     value,
                 } => {
                     maps.entry(field_name)
-                        .or_insert(BTreeMap::new())
+                        .or_insert_with(BTreeMap::new)
                         .insert(key, value);
                 }
             }
