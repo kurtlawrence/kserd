@@ -303,7 +303,7 @@ impl<'a> Kserd<'a> {
 
         let id = id.map(|x| x.to_owned());
 
-        let val = val.to_owned();
+        let val = val.into_owned();
 
         Kserd { id, val }
     }

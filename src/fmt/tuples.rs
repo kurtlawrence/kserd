@@ -17,7 +17,7 @@ pub(super) fn write(buf: String, node: Node, fmts: &[Fmt], col: usize, seq: SeqI
 
     match fmt.line {
         Repr::Inline => delim_writer(buf, prefix, suffix, |mut buf| {
-            let rm_trailing = seq.len() > 0;
+            let rm_trailing = !seq.is_empty();
 
             for n in seq {
                 buf = write_node(buf, n, fmts, col);

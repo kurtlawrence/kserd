@@ -118,7 +118,7 @@ mod tests {
     use super::*;
     use nom::error::VerboseError;
 
-        macro_rules! test {
+    macro_rules! test {
 		( $ex:expr, $($x:literal ),* ) => {{
 			$(
 				let r = pattern_match_delimited::<VerboseError<_>>($x);

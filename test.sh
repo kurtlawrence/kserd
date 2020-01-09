@@ -7,7 +7,7 @@ cargo +stable fmt
 cargo +stable fmt -- --check
 
 # Check clippy
-cargo clippy --all-targets --all-features -- -D warnings -D clippy::pedantic
+cargo clippy --all-features -- -D warnings 
 
 # Check feature builds
 cargo check

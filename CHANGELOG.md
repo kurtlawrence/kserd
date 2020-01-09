@@ -2,6 +2,7 @@
 # Version
 - Rename `ParseErr` to `Error`
 - Rename internal items to make clippy happy
+- Rename `to_owned` to `into_owned`
 
 # 0.2.0
 - Remove `From<String>` impl for `ToKserdErr`

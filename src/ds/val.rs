@@ -436,7 +436,7 @@ impl<'a> Value<'a> {
 /// Conversions.
 impl<'a> Value<'a> {
     /// Clones all data to make a static `Value`.
-    pub fn to_owned(self) -> Value<'static> {
+    pub fn into_owned(self) -> Value<'static> {
         match self {
             Value::Unit => Value::Unit,
             Value::Bool(v) => Value::Bool(v),
@@ -490,7 +490,7 @@ impl<'a> Value<'a> {
     /// ```
     ///
     /// [`Decoder`]: crate::encode::Decoder
-    pub fn mk_brw<'b>(&'b self) -> Value<'b> {
+    pub fn mk_brw(&self) -> Value {
         match &self {
             Value::Unit => Value::Unit,
             Value::Bool(v) => Value::Bool(*v),
@@ -534,7 +534,7 @@ impl<'a> Clone for Value<'a> {
         match &self {
             Value::Unit => Value::Unit,
             Value::Bool(v) => Value::Bool(*v),
-            Value::Num(v) => Value::Num(v.clone()),
+            Value::Num(v) => Value::Num(*v),
             Value::Str(s) => Value::Str(s.clone()),
             Value::Barr(b) => Value::Barr(b.clone()),
             Value::Tuple(seq) => Value::Tuple(seq.clone()),
