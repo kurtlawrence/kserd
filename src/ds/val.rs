@@ -686,4 +686,46 @@ mod tests {
         ])));
         test2(Kserd::new_map(vec![(Kserd::new_unit(), Kserd::new_num(0))]));
     }
+
+    #[test]
+    fn into_owned_test() {
+        use crate::to_kserd::ToKserd;
+
+        let prims = Kserd::new_cntr(vec![
+            ("unit", Kserd::new_unit()),
+            ("bool", Kserd::new_bool(true)),
+            ("num", Kserd::new_num(1.01234)),
+            ("str", Kserd::new_str("Hello, world!")),
+            ("barr", Kserd::new_barr([0, 1, 2, 4, 8].as_ref())),
+        ])
+        .unwrap();
+
+        let nested = Kserd::new_cntr(vec![
+            ("prims", prims.clone()),
+            (
+                "tuple",
+                Kserd::new(Value::Tuple(vec![prims.clone(), prims.clone()])),
+            ),
+            (
+                "seq",
+                Kserd::new(Value::Seq(vec![
+                    prims.clone(),
+                    prims.clone(),
+                    prims.clone(),
+                    prims.clone(),
+                ])),
+            ),
+            (
+                "map",
+                Kserd::new_map(vec![
+                    ("first".into_kserd().unwrap(), prims.clone()),
+                    ("second".into_kserd().unwrap(), prims.clone()),
+                ]),
+            ),
+        ])
+        .unwrap();
+
+        let nested_owned = nested.clone().into_owned();
+        assert_eq!(nested, nested_owned);
+    }
 }
