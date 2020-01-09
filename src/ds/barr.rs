@@ -68,7 +68,7 @@ impl<'a> Barr<'a> {
     /// let mut barr = Barr::brwed([0,1,2,3].as_ref());    
     /// assert_eq!(barr.to_owned(), Barr::owned(vec![0,1,2,3]));
     /// ```
-    pub fn to_owned(self) -> Barr<'static> {
+    pub fn into_owned(self) -> Barr<'static> {
         Barr::owned(self.inner.into_owned())
     }
 }

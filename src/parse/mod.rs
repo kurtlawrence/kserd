@@ -110,7 +110,7 @@ fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<
 ///
 /// Requires the _parse_ feature.
 ///
-/// Parsing can fail, and will return a [`ParseErr`] with trace information if it does.
+/// Parsing can fail, and will return a [`Error`] with trace information if it does.
 ///
 /// # Example
 ///

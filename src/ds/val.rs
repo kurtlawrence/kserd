@@ -441,33 +441,33 @@ impl<'a> Value<'a> {
             Value::Unit => Value::Unit,
             Value::Bool(v) => Value::Bool(v),
             Value::Num(v) => Value::Num(v),
-            Value::Str(s) => Value::Str(s.to_owned()),
-            Value::Barr(b) => Value::Barr(b.to_owned()),
+            Value::Str(s) => Value::Str(s.into_owned()),
+            Value::Barr(b) => Value::Barr(b.into_owned()),
             Value::Tuple(seq) => Value::Tuple({
                 let mut v = Vec::with_capacity(seq.len());
                 for i in seq {
-                    v.push(i.to_owned())
+                    v.push(i.into_owned())
                 }
                 v
             }),
             Value::Cntr(map) => Value::Cntr({
                 let mut m = BTreeMap::new();
                 for (k, v) in map {
-                    m.insert(k.to_owned(), v.to_owned());
+                    m.insert(k.into_owned(), v.into_owned());
                 }
                 m
             }),
             Value::Seq(seq) => Value::Seq({
                 let mut v = Vec::with_capacity(seq.len());
                 for i in seq {
-                    v.push(i.to_owned())
+                    v.push(i.into_owned())
                 }
                 v
             }),
             Value::Map(map) => Value::Map({
                 let mut m = BTreeMap::new();
                 for (k, v) in map {
-                    m.insert(k.to_owned(), v.to_owned());
+                    m.insert(k.into_owned(), v.into_owned());
                 }
                 m
             }),

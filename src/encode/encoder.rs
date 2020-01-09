@@ -127,11 +127,11 @@ impl ser::Serializer for Encoder {
     }
 
     fn serialize_str(self, v: &str) -> Res {
-        Ok(Kserd::new_str(v).to_owned())
+        Ok(Kserd::new_str(v).into_owned())
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Res {
-        Ok(Kserd::new_barr(v).to_owned())
+        Ok(Kserd::new_barr(v).into_owned())
     }
 
     fn serialize_none(self) -> Res {
