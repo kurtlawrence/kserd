@@ -1,5 +1,5 @@
 
-# Version
+# 0.3.0
 - Rename `ParseErr` to `Error`
 - Rename internal items to make clippy happy
 - Rename `to_owned` to `into_owned`
