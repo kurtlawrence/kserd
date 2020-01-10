@@ -43,7 +43,7 @@ pub(super) fn write(
     match fmt.line {
         Repr::Inline => {
             delim_writer(buf, prefix, suffix, |mut buf| {
-                let rm_trailing = map.len() > 0;
+                let rm_trailing = !map.is_empty();
 
                 for (name, v) in map {
                     buf.push_str(name);
@@ -122,6 +122,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::all)]
     fn cntr_fmting() {
         let kserd = Kserd::with_id(
             "Struct",

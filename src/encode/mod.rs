@@ -23,7 +23,7 @@
 //!
 //! let expected = Kserd::new(Value::Tuple(
 //!     vec![
-//! 	Kserd::new_num(100),
+//!         Kserd::new_num(100),
 //!         Kserd::new_str("Hello, world!"),
 //!         Kserd::new_num(3.14)
 //!     ]
@@ -38,7 +38,7 @@
 //! # use kserd::*;
 //! let kserd = Kserd::new(Value::Tuple(
 //!     vec![
-//! 	Kserd::new_num(100),
+//!         Kserd::new_num(100),
 //!         Kserd::new_str("Hello, world!"),
 //!         Kserd::new_num(3.14)
 //!     ]
@@ -107,8 +107,6 @@ impl<'a> Kserd<'a> {
     ///
     /// See [`Decoder`](encode::Decoder) for usage.
     pub fn decode<T: Deserialize<'a>>(self) -> Result<T, decoder::Error> {
-        let decoder = Decoder(self);
-        let r = <T as Deserialize>::deserialize(decoder);
-        r
+        <T as Deserialize>::deserialize(Decoder(self))
     }
 }

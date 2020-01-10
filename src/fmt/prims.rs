@@ -41,6 +41,6 @@ fn fmt_byte_array(buf: &mut String, val: &[u8], fmt_ident: bool, ident: Option<&
     maybe_write_prim_ident(buf, fmt_ident, ident);
 
     buf.push_str("b91'");
-    base91::iter_encode(val.iter().map(|x| *x), |byte| buf.push(byte.into()));
+    base91::iter_encode(val.iter().copied(), |byte| buf.push(byte.into()));
     buf.push('\'');
 }

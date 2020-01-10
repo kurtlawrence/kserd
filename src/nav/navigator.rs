@@ -116,11 +116,14 @@ impl<'a, 'k> Navigator<'a, 'k> {
 
         for child in inner.iter() {
             if let Some(parent) = child.parent {
-                parent_map.entry(parent).or_insert(Vec::new()).push(Info2 {
-                    idx: child.idx,
-                    value_idx_in_parent: child.value_idx_in_parent,
-                    key_idx_in_parent: child.key_idx_in_parent,
-                });
+                parent_map
+                    .entry(parent)
+                    .or_insert_with(Vec::new)
+                    .push(Info2 {
+                        idx: child.idx,
+                        value_idx_in_parent: child.value_idx_in_parent,
+                        key_idx_in_parent: child.key_idx_in_parent,
+                    });
             }
         }
 
@@ -218,6 +221,11 @@ impl<'a, 'k> Navigator<'a, 'k> {
         self.inner.len()
     }
 
+    /// The navigator has no nodes.
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
     /// Iterate over the nodes in depth-first order.
     ///
     /// # Example
@@ -268,6 +276,7 @@ fn validate(_: &Navigator) -> Option<bool> {
 }
 
 #[cfg(debug_assertions)]
+#[allow(clippy::all)]
 fn validate(navigator: &Navigator) -> Option<bool> {
     let v = &navigator.inner;
 
@@ -302,9 +311,8 @@ fn validate(navigator: &Navigator) -> Option<bool> {
             }
 
             if let Some(idx) = node.key_idx_in_parent {
-                match &parent.kserd.val {
-                    Value::Map(v) => assert_eq!(v.keys().nth(idx)?, node.kserd),
-                    _ => (),
+                if let Value::Map(v) = &parent.kserd.val {
+                    assert_eq!(v.keys().nth(idx)?, node.kserd);
                 }
             }
 
@@ -542,5 +550,12 @@ mod tests {
                 .collect::<Vec<_>>(),
             &["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"]
         );
+    }
+
+    #[test]
+    fn empty_test() {
+        let kserd = Kserd::new_unit();
+        let nav = Navigator::new(&kserd);
+        assert_eq!(nav.is_empty(), false);
     }
 }

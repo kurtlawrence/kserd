@@ -110,7 +110,7 @@ impl Number {
     /// ```rust
     /// # use kserd::*;
     /// use kserd::ds::IntoIntError;
-    ///	use std::f64::{INFINITY, NEG_INFINITY, NAN};
+    /// use std::f64::{INFINITY, NEG_INFINITY, NAN};
     ///
     /// // generally the conversion will work
     /// assert_eq!(Number::from(100i32).as_u128(), Ok(100));
@@ -144,7 +144,7 @@ impl Number {
     /// ```rust
     /// # use kserd::*;
     /// use kserd::ds::IntoIntError;
-    ///	use std::f64::{INFINITY, NEG_INFINITY, NAN};
+    /// use std::f64::{INFINITY, NEG_INFINITY, NAN};
     ///
     /// // generally the conversion will work
     /// assert_eq!(Number::from(100u32).as_i128(), Ok(100));
@@ -209,7 +209,7 @@ impl PartialEq for Number {
             // Three cases where lhs and rhs are same type
             (Uint(lhs), Uint(rhs)) => lhs.eq(rhs),
             (Int(lhs), Int(rhs)) => lhs.eq(rhs),
-            (Float(lhs), Float(rhs)) => cmp_float_to_float(lhs, rhs) == Ordering::Equal,
+            (Float(lhs), Float(rhs)) => cmp_float_to_float(*lhs, *rhs) == Ordering::Equal,
 
             // Integers
             (Uint(lhs), Int(_)) => other.as_u128().map(|rhs| lhs.eq(&rhs)).unwrap_or(false),
@@ -262,28 +262,28 @@ partial_ord_impl!(usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128
 
 impl Ord for Number {
     fn cmp(&self, other: &Number) -> Ordering {
-        match (self, other) {
+        match (*self, *other) {
             // Three cases where lhs and rhs are same type
-            (Uint(lhs), Uint(rhs)) => lhs.cmp(rhs),
-            (Int(lhs), Int(rhs)) => lhs.cmp(rhs),
+            (Uint(lhs), Uint(rhs)) => lhs.cmp(&rhs),
+            (Int(lhs), Int(rhs)) => lhs.cmp(&rhs),
             (Float(lhs), Float(rhs)) => cmp_float_to_float(lhs, rhs),
 
             // Integers
-            (Uint(lhs), Int(rhs)) => cmp_uint_to_int(lhs, *rhs),
-            (Int(lhs), Uint(rhs)) => rev_ordering(cmp_uint_to_int(rhs, *lhs)),
+            (Uint(lhs), Int(rhs)) => cmp_uint_to_int(&lhs, rhs),
+            (Int(lhs), Uint(rhs)) => rev_ordering(cmp_uint_to_int(&rhs, lhs)),
 
             // Floats
-            (Float(lhs), Uint(rhs)) => cmp_float_to_uint((*lhs).into(), rhs),
-            (Uint(lhs), Float(rhs)) => rev_ordering(cmp_float_to_uint((*rhs).into(), lhs)),
-            (Float(lhs), Int(rhs)) => cmp_float_to_int((*lhs).into(), rhs),
-            (Int(lhs), Float(rhs)) => rev_ordering(cmp_float_to_int((*rhs).into(), lhs)),
+            (Float(lhs), Uint(rhs)) => cmp_float_to_uint(lhs, rhs),
+            (Uint(lhs), Float(rhs)) => rev_ordering(cmp_float_to_uint(rhs, lhs)),
+            (Float(lhs), Int(rhs)) => cmp_float_to_int(lhs, rhs),
+            (Int(lhs), Float(rhs)) => rev_ordering(cmp_float_to_int(rhs, lhs)),
         }
     }
 }
 
 /// `[ -INF | ... | C0 | ... | +INF | CNaN ]`
-fn cmp_float_to_float(lhs: &f64, rhs: &f64) -> Ordering {
-    match lhs.partial_cmp(rhs) {
+fn cmp_float_to_float(lhs: f64, rhs: f64) -> Ordering {
+    match lhs.partial_cmp(&rhs) {
         Some(ordering) => ordering,
         None => {
             if lhs.is_nan() {
@@ -307,7 +307,7 @@ fn cmp_uint_to_int(lhs: &u128, rhs: i128) -> Ordering {
     }
 }
 
-fn cmp_float_to_uint(lhs: f64, rhs: &u128) -> Ordering {
+fn cmp_float_to_uint(lhs: f64, rhs: u128) -> Ordering {
     use Ordering::*;
 
     if lhs.is_sign_negative() {
@@ -317,7 +317,7 @@ fn cmp_float_to_uint(lhs: f64, rhs: &u128) -> Ordering {
     } else {
         let (floor, ceil) = float_bounds_uint(lhs);
 
-        match (floor.cmp(rhs), ceil.cmp(rhs)) {
+        match (floor.cmp(&rhs), ceil.cmp(&rhs)) {
             (Less, Less) => Less,
             (Less, Equal) => Less,
             (Equal, Equal) => Equal,
@@ -328,7 +328,7 @@ fn cmp_float_to_uint(lhs: f64, rhs: &u128) -> Ordering {
     }
 }
 
-fn cmp_float_to_int(lhs: f64, rhs: &i128) -> Ordering {
+fn cmp_float_to_int(lhs: f64, rhs: i128) -> Ordering {
     use Ordering::*;
 
     if lhs.is_sign_negative() && lhs.is_infinite() {
@@ -338,7 +338,7 @@ fn cmp_float_to_int(lhs: f64, rhs: &i128) -> Ordering {
     } else {
         let (floor, ceil) = float_bounds_int(lhs);
 
-        match (floor.cmp(rhs), ceil.cmp(rhs)) {
+        match (floor.cmp(&rhs), ceil.cmp(&rhs)) {
             (Less, Less) => Less,
             (Less, Equal) => Less,
             (Equal, Equal) => Equal,
@@ -423,13 +423,13 @@ fr_int!(isize, i8, i16, i32, i64, i128);
 
 impl From<f32> for Number {
     fn from(x: f32) -> Self {
-        Number::Float(f32_to_f64(x).into())
+        Number::Float(f32_to_f64(x))
     }
 }
 
 impl From<f64> for Number {
     fn from(x: f64) -> Self {
-        Number::Float(x.into())
+        Number::Float(x)
     }
 }
 
@@ -447,34 +447,34 @@ mod tests {
         use std::f64::{INFINITY, NAN, NEG_INFINITY};
         use Ordering::*;
 
-        assert_eq!(cmp_float_to_float(&0.0, &0.0), Equal);
-        assert_eq!(cmp_float_to_float(&0.0, &-0.0), Equal);
-        assert_eq!(cmp_float_to_float(&0.1, &0.0), Greater);
-        assert_eq!(cmp_float_to_float(&0.0, &0.1), Less);
-        assert_eq!(cmp_float_to_float(&3.14, &-3.14), Greater);
-        assert_eq!(cmp_float_to_float(&-3.14, &3.14), Less);
+        assert_eq!(cmp_float_to_float(0.0, 0.0), Equal);
+        assert_eq!(cmp_float_to_float(0.0, -0.0), Equal);
+        assert_eq!(cmp_float_to_float(0.1, 0.0), Greater);
+        assert_eq!(cmp_float_to_float(0.0, 0.1), Less);
+        assert_eq!(cmp_float_to_float(3.14, -3.14), Greater);
+        assert_eq!(cmp_float_to_float(-3.14, 3.14), Less);
 
-        assert_eq!(cmp_float_to_float(&NAN, &0.0), Greater);
-        assert_eq!(cmp_float_to_float(&NAN, &1.0), Greater);
-        assert_eq!(cmp_float_to_float(&NAN, &-1.0), Greater);
-        assert_eq!(cmp_float_to_float(&NAN, &INFINITY), Greater);
-        assert_eq!(cmp_float_to_float(&NAN, &NEG_INFINITY), Greater);
+        assert_eq!(cmp_float_to_float(NAN, 0.0), Greater);
+        assert_eq!(cmp_float_to_float(NAN, 1.0), Greater);
+        assert_eq!(cmp_float_to_float(NAN, -1.0), Greater);
+        assert_eq!(cmp_float_to_float(NAN, INFINITY), Greater);
+        assert_eq!(cmp_float_to_float(NAN, NEG_INFINITY), Greater);
 
-        assert_eq!(cmp_float_to_float(&0.0, &NAN), Less);
-        assert_eq!(cmp_float_to_float(&1.0, &NAN), Less);
-        assert_eq!(cmp_float_to_float(&-1.0, &NAN), Less);
-        assert_eq!(cmp_float_to_float(&INFINITY, &NAN), Less);
-        assert_eq!(cmp_float_to_float(&NEG_INFINITY, &NAN), Less);
+        assert_eq!(cmp_float_to_float(0.0, NAN), Less);
+        assert_eq!(cmp_float_to_float(1.0, NAN), Less);
+        assert_eq!(cmp_float_to_float(-1.0, NAN), Less);
+        assert_eq!(cmp_float_to_float(INFINITY, NAN), Less);
+        assert_eq!(cmp_float_to_float(NEG_INFINITY, NAN), Less);
 
-        assert_eq!(cmp_float_to_float(&INFINITY, &0.0), Greater);
-        assert_eq!(cmp_float_to_float(&INFINITY, &NEG_INFINITY), Greater);
-        assert_eq!(cmp_float_to_float(&INFINITY, &INFINITY), Equal);
+        assert_eq!(cmp_float_to_float(INFINITY, 0.0), Greater);
+        assert_eq!(cmp_float_to_float(INFINITY, NEG_INFINITY), Greater);
+        assert_eq!(cmp_float_to_float(INFINITY, INFINITY), Equal);
 
-        assert_eq!(cmp_float_to_float(&0.0, &INFINITY), Less);
-        assert_eq!(cmp_float_to_float(&NEG_INFINITY, &INFINITY), Less);
-        assert_eq!(cmp_float_to_float(&INFINITY, &INFINITY), Equal);
+        assert_eq!(cmp_float_to_float(0.0, INFINITY), Less);
+        assert_eq!(cmp_float_to_float(NEG_INFINITY, INFINITY), Less);
+        assert_eq!(cmp_float_to_float(INFINITY, INFINITY), Equal);
 
-        assert_eq!(cmp_float_to_float(&NEG_INFINITY, &NEG_INFINITY), Equal);
+        assert_eq!(cmp_float_to_float(NEG_INFINITY, NEG_INFINITY), Equal);
     }
 
     #[test]

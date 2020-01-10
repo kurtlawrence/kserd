@@ -272,7 +272,7 @@ impl<'a> Kserd<'a> {
     /// The identity. Same as the `.id` field but mapped as a `&str`.
     ///
     /// # Example
-    ///	```rust
+    /// ```rust
     /// # use kserd::*;
     /// let kserd = Kserd::with_id("Hello", Value::Unit).unwrap();
     /// assert_eq!(kserd.id(), Some("Hello"));
@@ -298,12 +298,12 @@ impl<'a> DerefMut for Kserd<'a> {
 /// Conversions.
 impl<'a> Kserd<'a> {
     /// Clones all data to make a static `Kserd`.
-    pub fn to_owned(self) -> Kserd<'static> {
+    pub fn into_owned(self) -> Kserd<'static> {
         let Kserd { id, val } = self;
 
-        let id = id.map(|x| x.to_owned());
+        let id = id.map(|x| x.into_owned());
 
-        let val = val.to_owned();
+        let val = val.into_owned();
 
         Kserd { id, val }
     }
@@ -324,7 +324,7 @@ impl<'a> Kserd<'a> {
     /// ```
     ///
     /// [`Decoder`]: crate::encode::Decoder
-    pub fn mk_brw<'b>(&'b self) -> Kserd<'b> {
+    pub fn mk_brw(&self) -> Kserd {
         let id = self.id().map(Kstr::brwed);
         let val = self.val.mk_brw();
         Kserd { id, val }

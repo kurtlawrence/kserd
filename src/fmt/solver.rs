@@ -269,6 +269,8 @@ fn concise_width(node: &Kserd, config: &FormattingConfig) -> usize {
 
 // make a note that this DOES NOT RESET formatting
 pub fn apply_config(fmtr: &mut Formatter, config: FormattingConfig) {
+    use NodeValue::*;
+    use Repr::*;;
     // first run through and just apply the displaying of identities, pretty easy
     for i in 0..fmtr.len() {
         let id = match fmtr.get(i).unwrap().value() {
@@ -306,8 +308,6 @@ pub fn apply_config(fmtr: &mut Formatter, config: FormattingConfig) {
         let repr = min_line_repr(c, lim, &inline_widths, &concise_widths);
 
         // manually change some
-        use NodeValue::*;
-        use Repr::*;;
         let child = fmtr.get(c).unwrap();
         let repr = match (repr, child.value(), child.parent().unwrap().value()) {
             (Concise, Cntr(_), Seq(_)) => Verbose, // child containers in a sequence won't go as verbose as concise is generally just as wide
@@ -470,7 +470,7 @@ mod tests {
     fn test_offset_calc_01() {
         let kserd = Kserd::new_cntr(vec![(
             "field-name",
-            Kserd::new_map(vec![(Kserd::new_num(1234), Kserd::new_num(1234567))]),
+            Kserd::new_map(vec![(Kserd::new_num(1234), Kserd::new_num(1_234_567))]),
         )])
         .unwrap();
 
@@ -607,7 +607,7 @@ mod tests {
 
     #[test]
     fn test_offset_calc_04() {
-        let kserd = Kserd::new_map(vec![(Kserd::new_num(1234), Kserd::new_num(123456))]);
+        let kserd = Kserd::new_map(vec![(Kserd::new_num(1234), Kserd::new_num(123_456))]);
 
         let mut fmtr = Formatter::new(&kserd);
         let inline_widths = solver::inline_widths(&fmtr.root(), &FormattingConfig::default());

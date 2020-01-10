@@ -34,6 +34,11 @@ impl<'a, 'k, 'nav, 'node> SeqIter<'a, 'k, 'nav, 'node> {
     pub fn len(&self) -> usize {
         self.seq.len()
     }
+
+    /// The iterator has no elements.
+    pub fn is_empty(&self) -> bool {
+        self.seq.as_ref().is_empty()
+    }
 }
 
 impl<'a: 'node, 'k: 'node, 'nav: 'node, 'node> Iterator for SeqIter<'a, 'k, 'nav, 'node> {
@@ -54,6 +59,11 @@ impl<'a, 'k, 'nav, 'node> NamedIter<'a, 'k, 'nav, 'node> {
     /// The number of items.
     pub fn len(&self) -> usize {
         self.values.len()
+    }
+
+    /// The iterator has no elements.
+    pub fn is_empty(&self) -> bool {
+        self.values.as_ref().is_empty()
     }
 }
 
@@ -80,6 +90,11 @@ impl<'a, 'k, 'nav, 'node> KeyedIter<'a, 'k, 'nav, 'node> {
     /// The number of items.
     pub fn len(&self) -> usize {
         self.values.len()
+    }
+
+    /// The iterator has no elements.
+    pub fn is_empty(&self) -> bool {
+        self.values.as_ref().is_empty()
     }
 }
 

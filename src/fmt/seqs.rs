@@ -25,7 +25,7 @@ pub(super) fn write(
     match fmt.line {
         Repr::Inline => {
             delim_writer(buf, prefix, suffix, |mut buf| {
-                let rm_trailing = seq.len() > 0;
+                let rm_trailing = !seq.is_empty();
 
                 for n in seq {
                     buf = write_node(buf, n, fmts, col);
@@ -88,6 +88,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::all)]
     fn seq_fmting() {
         let kserd = Kserd::with_id(
             "hello",

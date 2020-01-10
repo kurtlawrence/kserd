@@ -15,8 +15,8 @@ fn kvp_kserdstr_to_kserd<'a, E: ParseError<&'a str>>(
             "kserdstr-kserd key-value pair",
             separated_pair(
                 field_name,
-                ignore_inline_wsp(char('=')),
-                cut(ignore_inline_wsp(value_parser)),
+                ignore_inline_whitespace(char('=')),
+                cut(ignore_inline_whitespace(value_parser)),
             ),
         )(input)
     }
@@ -29,8 +29,8 @@ fn inline_cntr_kserds<'a, E: ParseError<&'a str>>(
     context(
         "comma separated kserdstr-kserd pair",
         separated_list(
-            ignore_inline_wsp(char(',')),
-            ignore_inline_wsp(kvp_kserdstr_to_kserd(true)),
+            ignore_inline_whitespace(char(',')),
+            ignore_inline_whitespace(kvp_kserdstr_to_kserd(true)),
         ),
     )(i)
 }
@@ -42,22 +42,23 @@ fn concise_cntr_kserds<'a, E: ParseError<&'a str>>(
     context(
         "newline separated (concise) kserdstr-kserd pair",
         preceded(
-            multiline_wsp,
+            multiline_whitespace,
             terminated(
-                separated_list(multiline_wsp, kvp_kserdstr_to_kserd(false)),
-                multiline_wsp,
+                separated_list(multiline_whitespace, kvp_kserdstr_to_kserd(false)),
+                multiline_whitespace,
             ),
         ),
     )(i)
 }
 
-pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
+pub fn delimited<'a, E: ParseError<&'a str>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
+    use std::iter::FromIterator;
     move |i: &'a str| {
         let (i, ident) = opt(ident(false))(i)?;
 
-        let (i, _) = ignore_inline_wsp(char('('))(i)?; // open with paren
+        let (i, _) = ignore_inline_whitespace(char('('))(i)?; // open with paren
 
         // we manually work out if should be treating as inline or concise
         let concise = recognise_concise(i) && !force_inline;
@@ -74,9 +75,11 @@ pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
             "inline container"
         };
 
-        let (i, value) = context(ctx, cut(terminated(parser, ignore_inline_wsp(char(')')))))(i)?;
+        let (i, value) = context(
+            ctx,
+            cut(terminated(parser, ignore_inline_whitespace(char(')')))),
+        )(i)?;
 
-        use std::iter::FromIterator;
         let value = Value::Cntr(BTreeMap::from_iter(value));
 
         Ok((i, kserd_ctor(ident, value)))
@@ -99,7 +102,7 @@ pub fn cntr_delimited<'a, E: ParseError<&'a str>>(
 ///
 /// `indents` is in number of _indents_ that is expected to be inside _this_ Container.
 /// An _indent_ is 4 consectutive spaces, or a single tab character.
-pub fn verbose_cntr<'a, E: ParseError<&'a str>>(
+pub fn verbose<'a, E: ParseError<&'a str>>(
     indents: usize,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
@@ -118,7 +121,7 @@ pub fn verbose_cntr<'a, E: ParseError<&'a str>>(
                     rfields.insert(name, value);
                 }
                 ContainerField::SeqEntry(name, value) => {
-                    seqs.entry(name).or_insert(Vec::new()).push(value);
+                    seqs.entry(name).or_insert_with(Vec::new).push(value);
                 }
                 ContainerField::MapEntry {
                     field_name,
@@ -126,7 +129,7 @@ pub fn verbose_cntr<'a, E: ParseError<&'a str>>(
                     value,
                 } => {
                     maps.entry(field_name)
-                        .or_insert(BTreeMap::new())
+                        .or_insert_with(BTreeMap::new)
                         .insert(key, value);
                 }
             }
@@ -168,7 +171,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
         let i = {
             let mut tmp = i;
             loop {
-                let (n, yes) = opt(ignore_inline_wsp(line_ending))(tmp)?;
+                let (n, yes) = opt(ignore_inline_whitespace(line_ending))(tmp)?;
                 if yes.is_some() {
                     tmp = n; // nothing but net
                 } else {
@@ -184,9 +187,9 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
 
         let (i, _) = expect_indents(indents)(i)?;
 
-        let (i, _) = inline_wsp(i)?; // passed the indent threshold, ignore any extra inline space
-                                     // the thinking is it won't affect parsing, but could affect formatting
-                                     // hopefully can write a formatter to prettify it.
+        let (i, _) = inline_whitespace(i)?; // passed the indent threshold, ignore any extra inline space
+                                            // the thinking is it won't affect parsing, but could affect formatting
+                                            // hopefully can write a formatter to prettify it.
 
         if recognise_field_assign(i) {
             let (i, (fname, val)) = kvp_kserdstr_to_kserd(false)(i)?;
@@ -196,14 +199,14 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                 tag("[["),
                 cut(terminated(verbose_field_name_and_identity, tag("]]"))),
             )(i)?;
-            let (i, _) = ignore_inline_wsp(line_ending)(i)?; // must be a new line after a field name [[]]
+            let (i, _) = ignore_inline_whitespace(line_ending)(i)?; // must be a new line after a field name [[]]
 
             // now work out if it is a map or just sequence.
             // a map as the usual inline kserd, followed by the colon.
 
             let (i, key) = match terminated::<_, _, _, (), _, _>(
-                terminated(kserd_inline, ignore_inline_wsp(char(':'))),
-                ignore_inline_wsp(line_ending),
+                terminated(kserd_inline, ignore_inline_whitespace(char(':'))),
+                ignore_inline_whitespace(line_ending),
             )(i)
             {
                 Ok((ii, key)) => (ii, Some(key)),
@@ -235,7 +238,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                 tag("["),
                 cut(terminated(verbose_field_name_and_identity, tag("]"))),
             )(i)?;
-            let (i, _) = ignore_inline_wsp(line_ending)(i)?; // must be a new line after a field name []
+            let (i, _) = ignore_inline_whitespace(line_ending)(i)?; // must be a new line after a field name []
             let (i, mut value) = context("nested container", cut(kserd_nested(indents + 1)))(i)?;
             value.id = identity;
 

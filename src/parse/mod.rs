@@ -8,10 +8,8 @@ mod prims;
 mod wsp;
 
 use super::*;
-use cntr::*;
 use heuristics::*;
 use list::*;
-use map::*;
 use names::*;
 use nom::{
     branch::alt,
@@ -36,7 +34,7 @@ use wsp::*;
 /// locations where errors originate from. `ParseErr` holds this hierarchy and can provide traces
 /// and a backtrace string to better understand the error.
 #[derive(PartialEq)]
-pub struct ParseErr<'a> {
+pub struct Error<'a> {
     /// Format `(offset, error_kind)`.
     errs: Vec<(usize, VerboseErrorKind)>,
     /// Format `(line_offset, (line_idx, line))`.
@@ -73,9 +71,9 @@ fn kserd_delimited<'a, E: ParseError<&'a str>>(
 
         match pat {
             Nonprim::Tuple => tuple(force_inline)(i),
-            Nonprim::Cntr => cntr_delimited(force_inline)(i),
+            Nonprim::Cntr => cntr::delimited(force_inline)(i),
             Nonprim::Seq => seq_delimited(force_inline)(i),
-            Nonprim::Map => map_delimited(force_inline)(i),
+            Nonprim::Map => map::delimited(force_inline)(i),
             Nonprim::None => prim(i),
         }
     }
@@ -97,22 +95,22 @@ fn kserd_nested<'a, E: ParseError<&'a str>>(
 
         if verbose {
             // verbose can only be a Container type!
-            verbose_cntr(indents)(i)
+            cntr::verbose(indents)(i)
         } else {
-            ignore_inline_wsp(kserd_concise)(i)
+            ignore_inline_whitespace(kserd_concise)(i)
         }
     }
 }
 
 fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
-    all_consuming(terminated(kserd_nested(0), multiline_wsp))(i)
+    all_consuming(terminated(kserd_nested(0), multiline_whitespace))(i)
 }
 
 /// Attemp to parse a string into a [`Kserd`] object.
 ///
 /// Requires the _parse_ feature.
 ///
-/// Parsing can fail, and will return a [`ParseErr`] with trace information if it does.
+/// Parsing can fail, and will return a [`Error`] with trace information if it does.
 ///
 /// # Example
 ///
@@ -166,15 +164,13 @@ fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<
 /// ```
 ///
 /// [`Kserd`]: crate::Kserd
-/// [`ParseErr`]: ParseErr
-pub fn parse<'a>(s: &'a str) -> Result<Kserd<'a>, ParseErr<'a>> {
-    use nom::Err::*;
-
+/// [`Error`]: Error
+pub fn parse(s: &str) -> Result<Kserd, Error> {
     kserd_root::<nom::error::VerboseError<_>>(s)
         .map(|x| x.1)
         .map_err(|e| match e {
-            Error(x) | Failure(x) => ParseErr::new(s, x),
-            Incomplete(_) => {
+            Err::Error(x) | Err::Failure(x) => Error::new(s, x),
+            Err::Incomplete(_) => {
                 unreachable!("all parsers use complete versions so no incomplete possible")
             }
         })

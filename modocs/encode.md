@@ -23,7 +23,7 @@ let data = (
 
 let expected = Kserd::new(Value::Tuple(
     vec![
-	Kserd::new_num(100),
+        Kserd::new_num(100),
         Kserd::new_str("Hello, world!"),
         Kserd::new_num(3.14)
     ]
@@ -38,7 +38,7 @@ Decoding can be done for any type that implements [`Deserialize`].
 # use kserd::*;
 let kserd = Kserd::new(Value::Tuple(
     vec![
-	Kserd::new_num(100),
+        Kserd::new_num(100),
         Kserd::new_str("Hello, world!"),
         Kserd::new_num(3.14)
     ]

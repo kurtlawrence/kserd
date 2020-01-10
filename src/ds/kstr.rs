@@ -66,8 +66,8 @@ impl<'a> Kstr<'a> {
     /// # use kserd::*;
     /// let kstr = Kstr::brwed("Hello, world!");
     /// assert_eq!(kstr.to_owned(), Kstr::owned(String::from("Hello, world!")));
-    ///	```
-    pub fn to_owned(self) -> Kstr<'static> {
+    /// ```
+    pub fn into_owned(self) -> Kstr<'static> {
         Kstr::owned(self.inner.into_owned())
     }
 }

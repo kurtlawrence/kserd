@@ -3,7 +3,7 @@ use nom::error::VerboseError;
 use std::collections::BTreeMap;
 use std::fmt;
 
-impl<'a> ParseErr<'a> {
+impl<'a> Error<'a> {
     pub(super) fn new(src: &'a str, verr: VerboseError<&'a str>) -> Self {
         Self {
             errs: verr
@@ -49,6 +49,11 @@ impl<'a> ParseErr<'a> {
     /// The number of errors in the error hierarchy.
     pub fn len(&self) -> usize {
         self.errs.len()
+    }
+
+    /// No errors in the rror hierarchy.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Combine the error into a backtrace.
@@ -108,7 +113,7 @@ impl<'a> ParseErr<'a> {
     }
 }
 
-impl<'a> fmt::Debug for ParseErr<'a> {
+impl<'a> fmt::Debug for Error<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.backtrace())
     }
@@ -168,7 +173,7 @@ fn make_empty_trace(ekind: &VerboseErrorKind) -> Trace<'static> {
     }
 }
 
-fn make_trace_msg<'a>(linestr: &str, col: usize, ekind: &VerboseErrorKind) -> String {
+fn make_trace_msg(linestr: &str, col: usize, ekind: &VerboseErrorKind) -> String {
     use VerboseErrorKind::*;
     match ekind {
         Char(c) => {
@@ -220,6 +225,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::all)]
     fn test_get_line() {
         // test empty
         let s = "";
@@ -270,7 +276,7 @@ mod tests {
                 line: 1,
                 col: 21,
                 linestr: r#"<str> "Hello, world!"#,
-                msg: format!(r#"expected '"', reached end of line or end of file first"#),
+                msg: r#"expected '"', reached end of line or end of file first"#.to_string(),
             })
         );
         assert_eq!(
@@ -279,7 +285,7 @@ mod tests {
                 line: 1,
                 col: 7,
                 linestr: r#"<str> "Hello, world!"#,
-                msg: format!(r#"in string"#),
+                msg: r#"in string"#.to_string(),
             })
         );
         assert_eq!(
@@ -288,7 +294,7 @@ mod tests {
                 line: 1,
                 col: 7,
                 linestr: r#"<str> "Hello, world!"#,
-                msg: format!(r#"in primitive value"#),
+                msg: r#"in primitive value"#.to_string(),
             })
         );
         assert_eq!(
@@ -297,7 +303,7 @@ mod tests {
                 line: 1,
                 col: 1,
                 linestr: r#"<str> "Hello, world!"#,
-                msg: format!(r#"in primitive"#),
+                msg: r#"in primitive"#.to_string(),
             })
         );
         assert_eq!(err.get(4), None);
@@ -320,7 +326,7 @@ mod tests {
                 line: 3,
                 col: 11,
                 linestr: r#"("key, 1):"#,
-                msg: format!(r#"expected '"', reached end of line or end of file first"#),
+                msg: r#"expected '"', reached end of line or end of file first"#.to_string(),
             })
         );
     }

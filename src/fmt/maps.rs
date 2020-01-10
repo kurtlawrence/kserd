@@ -45,7 +45,7 @@ pub(super) fn write(
     match fmt.line {
         Repr::Inline => {
             delim_writer(buf, prefix, suffix, |mut buf| {
-                let rm_trailing = map.len() > 0;
+                let rm_trailing = !map.is_empty();
 
                 buf.push(' ');
 
@@ -118,6 +118,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::all)]
     fn map_fmting() {
         let kserd = Kserd::new_map(vec![
             (Kserd::new_unit(), Kserd::new_num(100)),
