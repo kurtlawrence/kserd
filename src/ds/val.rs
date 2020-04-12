@@ -1,7 +1,10 @@
 use super::*;
 use crate::Fields;
-use std::borrow::Cow;
-use std::{error, fmt};
+use std::{
+    borrow::Cow,
+    error, fmt,
+    ops::{Deref, DerefMut},
+};
 
 /// The value of a [`Kserd`].
 ///
@@ -236,8 +239,6 @@ impl<'a> Value<'a> {
 }
 
 /// Convenience methods for accessing values straight from the [`Value`] enum.
-///
-/// [`Value`]: crate::Value
 impl<'a> Value<'a> {
     /// `Value` is a unit value (`Value::Unit`).
     ///
@@ -431,6 +432,20 @@ impl<'a> Value<'a> {
             _ => None,
         }
     }
+
+    pub fn cntr(&self) -> Option<Accessor<&Fields<'a>>> {
+        match self {
+            Value::Cntr(fields) => Some(Accessor(fields)),
+            _ => None,
+        }
+    }
+
+    pub fn cntr_mut(&mut self) -> Option<Accessor<&mut Fields<'a>>> {
+        match self {
+            Value::Cntr(fields) => Some(Accessor(fields)),
+            _ => None,
+        }
+    }
 }
 
 /// Conversions.
@@ -570,6 +585,30 @@ impl<'a> fmt::Debug for Value<'a> {
             Value::Seq(v) => f.debug_list().entries(v.iter()).finish(),
             Value::Map(v) => f.debug_map().entries(v.iter()).finish(),
         }
+    }
+}
+
+// ########### ACCESSORS ######################################################
+pub struct Accessor<T>(T);
+
+impl<T> Deref for Accessor<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for Accessor<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
+    }
+}
+
+impl<'a> Accessor<&Fields<'a>> {
+    pub fn get_unit<K>(&self, name: K) -> Option<()> {
+        self.get(name)
+            .and_then(|v| if v.unit() { Some(()) } else { None })
     }
 }
 
