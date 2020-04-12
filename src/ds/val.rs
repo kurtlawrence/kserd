@@ -1,7 +1,7 @@
 use super::*;
-use crate::Fields;
+use crate::{Fields, List, Map};
 use std::{
-    borrow::Cow,
+    borrow::{Borrow, Cow},
     error, fmt,
     ops::{Deref, DerefMut},
 };
@@ -64,7 +64,7 @@ pub enum Value<'a> {
     /// It shares the same in-memory representation as a sequence but has different formatting
     /// syntax. Tuples represent not only anonymous tuples (`(u32, u32, u32)`) but also newtype structs and
     /// enums (ie `Point3d(u32, u32, u32)`).
-    Tuple(Vec<Kserd<'a>>),
+    Tuple(List<'a>),
     /// A container value.
     ///
     /// A container is a _hetrogeneous collection of named objects_.
@@ -73,11 +73,11 @@ pub enum Value<'a> {
     /// A sequence of values.
     ///
     /// A sequence is a _homogeneous sequence of unnamed objects_.
-    Seq(Vec<Kserd<'a>>),
+    Seq(List<'a>),
     /// A map of values.
     ///
     /// A map is a _homogeneous mapping of keys to values_.
-    Map(BTreeMap<Kserd<'a>, Kserd<'a>>),
+    Map(Map<'a>),
 }
 
 /// The field name in a container contains invalid characters.
@@ -433,6 +433,20 @@ impl<'a> Value<'a> {
         }
     }
 
+    pub fn tuple(&self) -> Option<&List<'a>> {
+        match self {
+            Value::Tuple(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn tuple_mut(&mut self) -> Option<&mut List<'a>> {
+        match self {
+            Value::Tuple(val) => Some(val),
+            _ => None,
+        }
+    }
+
     pub fn cntr(&self) -> Option<Accessor<&Fields<'a>>> {
         match self {
             Value::Cntr(fields) => Some(Accessor(fields)),
@@ -443,6 +457,34 @@ impl<'a> Value<'a> {
     pub fn cntr_mut(&mut self) -> Option<Accessor<&mut Fields<'a>>> {
         match self {
             Value::Cntr(fields) => Some(Accessor(fields)),
+            _ => None,
+        }
+    }
+
+    pub fn seq(&self) -> Option<&List<'a>> {
+        match self {
+            Value::Seq(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn seq_mut(&mut self) -> Option<&mut List<'a>> {
+        match self {
+            Value::Seq(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn tuple_or_seq(&self) -> Option<&List<'a>> {
+        match self {
+            Value::Tuple(x) | Value::Seq(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    pub fn tuple_or_seq_mut(&mut self) -> Option<&mut List<'a>> {
+        match self {
+            Value::Tuple(x) | Value::Seq(x) => Some(x),
             _ => None,
         }
     }
@@ -606,9 +648,130 @@ impl<T> DerefMut for Accessor<T> {
 }
 
 impl<'a> Accessor<&Fields<'a>> {
-    pub fn get_unit<K>(&self, name: K) -> Option<()> {
+    pub fn get_unit<K>(&self, name: &K) -> Option<()>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
         self.get(name)
             .and_then(|v| if v.unit() { Some(()) } else { None })
+    }
+
+    pub fn get_bool<K>(&self, name: &K) -> Option<bool>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|v| v.bool())
+    }
+
+    pub fn get_num<K>(&self, name: &K) -> Option<Number>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| match &k.val {
+            Value::Num(n) => Some(*n),
+            _ => None,
+        })
+    }
+
+    pub fn get_str<K>(&self, name: &K) -> Option<&str>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.str())
+    }
+
+    pub fn get_barr<K>(&self, name: &K) -> Option<&[u8]>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.barr())
+    }
+
+    pub fn get_tuple<K>(&self, name: &K) -> Option<&List<'a>>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.tuple())
+    }
+
+    pub fn get_seq<K>(&self, name: &K) -> Option<&List<'a>>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.seq())
+    }
+
+    pub fn get_tuple_or_seq<K>(&self, name: &K) -> Option<&List<'a>>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.tuple_or_seq())
+    }
+}
+
+impl<'a> Accessor<&mut Fields<'a>> {
+    pub fn get_bool_mut<K>(&mut self, name: &K) -> Option<&mut bool>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|v| v.bool_mut())
+    }
+
+    pub fn get_num_mut<K>(&mut self, name: &K) -> Option<&mut Number>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.num_mut())
+    }
+
+    pub fn get_str_mut<K>(&mut self, name: &K) -> Option<&mut String>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.str_mut())
+    }
+
+    pub fn get_barr<K>(&mut self, name: &K) -> Option<&mut Vec<u8>>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.barr_mut())
+    }
+
+    pub fn get_tuple_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.tuple_mut())
+    }
+
+    pub fn get_seq_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.seq_mut())
+    }
+
+    pub fn get_tuple_or_seq_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
+    where
+        K: Eq + Ord,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.tuple_or_seq_mut())
     }
 }
 
@@ -654,6 +817,22 @@ mod tests {
         let mut x = Value::new_barr([0, 1, 2].as_ref());
         x.barr_mut().map(|x| x.push(3));
         assert_eq!(x.barr(), Some([0, 1, 2, 3].as_ref()));
+
+        let mut x = Value::Tuple(vec!["a".into(), "b".into()]);
+        x.tuple_mut().map(|x| x.push("c".into()));
+        assert_eq!(x.tuple(), Some(vec!["a".into(), "b".into(), "c".into()]));
+        assert_eq!(
+            x.tuple_or_seq(),
+            Some(vec!["a".into(), "b".into(), "c".into()])
+        );
+
+        let mut x = Value::Seq(vec!["a".into(), "b".into()]);
+        x.tuple_mut().map(|x| x.push("c".into()));
+        assert_eq!(x.seq(), Some(vec!["a".into(), "b".into(), "c".into()]));
+        assert_eq!(
+            x.tuple_or_seq(),
+            Some(vec!["a".into(), "b".into(), "c".into()])
+        );
     }
 
     #[test]
@@ -766,5 +945,13 @@ mod tests {
 
         let nested_owned = nested.clone().into_owned();
         assert_eq!(nested, nested_owned);
+    }
+
+    #[test]
+    fn cntr_accessor() {
+        let mut x = Value::new_cntr(vec![("a", Kserd::new_num(101))]);
+        let mut accessor = x.cntr_mut();
+        assert_eq!(x.is_some(), true);
+        assert_eq!(x.get_num("a"), Some(101.into()));
     }
 }
