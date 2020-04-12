@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::{Borrow, Cow};
 use std::fmt::{self as stdfmt, Debug, Display};
 use std::ops::Deref;
 
@@ -86,6 +86,12 @@ impl<'a> AsRef<str> for Kstr<'a> {
     }
 }
 
+impl<'a> Borrow<str> for Kstr<'a> {
+    fn borrow(&self) -> &str {
+        self.as_ref()
+    }
+}
+
 impl<'a> From<&'a str> for Kstr<'a> {
     fn from(s: &'a str) -> Self {
         Self::brwed(s)
@@ -154,5 +160,15 @@ mod tests {
     fn display_test() {
         let kstr = Kstr::brwed("Hello, world!");
         assert_eq!(&kstr.to_string(), "Hello, world!");
+    }
+
+    #[test]
+    fn test_borrow_trait() {
+        let set = vec![Kstr::from("Hello"), Kstr::from("World")]
+            .into_iter()
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(set.contains("Hello"), true);
+        assert_eq!(set.contains("World"), true);
+        assert_eq!(set.contains("rust"), false);
     }
 }
