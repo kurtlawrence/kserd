@@ -1,6 +1,5 @@
 #![cfg(feature = "encode")]
 use kserd::*;
-use std::f32::consts::PI;
 
 #[test]
 fn eq_unit() {

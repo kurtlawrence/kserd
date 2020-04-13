@@ -650,7 +650,7 @@ impl<T> DerefMut for Accessor<T> {
 impl<'a> Accessor<&Fields<'a>> {
     pub fn get_unit<K>(&self, name: &K) -> Option<()>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name)
@@ -659,7 +659,7 @@ impl<'a> Accessor<&Fields<'a>> {
 
     pub fn get_bool<K>(&self, name: &K) -> Option<bool>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name).and_then(|v| v.bool())
@@ -667,7 +667,7 @@ impl<'a> Accessor<&Fields<'a>> {
 
     pub fn get_num<K>(&self, name: &K) -> Option<Number>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name).and_then(|k| match &k.val {
@@ -678,7 +678,7 @@ impl<'a> Accessor<&Fields<'a>> {
 
     pub fn get_str<K>(&self, name: &K) -> Option<&str>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name).and_then(|k| k.str())
@@ -686,7 +686,7 @@ impl<'a> Accessor<&Fields<'a>> {
 
     pub fn get_barr<K>(&self, name: &K) -> Option<&[u8]>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name).and_then(|k| k.barr())
@@ -694,7 +694,7 @@ impl<'a> Accessor<&Fields<'a>> {
 
     pub fn get_tuple<K>(&self, name: &K) -> Option<&List<'a>>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name).and_then(|k| k.tuple())
@@ -702,7 +702,7 @@ impl<'a> Accessor<&Fields<'a>> {
 
     pub fn get_seq<K>(&self, name: &K) -> Option<&List<'a>>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name).and_then(|k| k.seq())
@@ -710,7 +710,7 @@ impl<'a> Accessor<&Fields<'a>> {
 
     pub fn get_tuple_or_seq<K>(&self, name: &K) -> Option<&List<'a>>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get(name).and_then(|k| k.tuple_or_seq())
@@ -720,7 +720,7 @@ impl<'a> Accessor<&Fields<'a>> {
 impl<'a> Accessor<&mut Fields<'a>> {
     pub fn get_bool_mut<K>(&mut self, name: &K) -> Option<&mut bool>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get_mut(name).and_then(|v| v.bool_mut())
@@ -728,7 +728,7 @@ impl<'a> Accessor<&mut Fields<'a>> {
 
     pub fn get_num_mut<K>(&mut self, name: &K) -> Option<&mut Number>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get_mut(name).and_then(|k| k.num_mut())
@@ -736,7 +736,7 @@ impl<'a> Accessor<&mut Fields<'a>> {
 
     pub fn get_str_mut<K>(&mut self, name: &K) -> Option<&mut String>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get_mut(name).and_then(|k| k.str_mut())
@@ -744,7 +744,7 @@ impl<'a> Accessor<&mut Fields<'a>> {
 
     pub fn get_barr<K>(&mut self, name: &K) -> Option<&mut Vec<u8>>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get_mut(name).and_then(|k| k.barr_mut())
@@ -752,7 +752,7 @@ impl<'a> Accessor<&mut Fields<'a>> {
 
     pub fn get_tuple_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get_mut(name).and_then(|k| k.tuple_mut())
@@ -760,7 +760,7 @@ impl<'a> Accessor<&mut Fields<'a>> {
 
     pub fn get_seq_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get_mut(name).and_then(|k| k.seq_mut())
@@ -768,7 +768,7 @@ impl<'a> Accessor<&mut Fields<'a>> {
 
     pub fn get_tuple_or_seq_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
     where
-        K: Eq + Ord,
+        K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
     {
         self.get_mut(name).and_then(|k| k.tuple_or_seq_mut())
@@ -778,6 +778,11 @@ impl<'a> Accessor<&mut Fields<'a>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ToKserd;
+
+    fn k<'a, T: ToKserd<'a>>(t: T) -> Kserd<'a> {
+        t.into_kserd().unwrap()
+    }
 
     #[test]
     fn invalid_field_test() {
@@ -818,20 +823,20 @@ mod tests {
         x.barr_mut().map(|x| x.push(3));
         assert_eq!(x.barr(), Some([0, 1, 2, 3].as_ref()));
 
-        let mut x = Value::Tuple(vec!["a".into(), "b".into()]);
-        x.tuple_mut().map(|x| x.push("c".into()));
-        assert_eq!(x.tuple(), Some(vec!["a".into(), "b".into(), "c".into()]));
+        let mut x = Value::Tuple(vec![k("a"), k("b")]);
+        x.tuple_mut().map(|x| x.push(k("c")));
+        assert_eq!(x.tuple(), Some(&vec![k("a"), k("b"), k("c")]));
         assert_eq!(
             x.tuple_or_seq(),
-            Some(vec!["a".into(), "b".into(), "c".into()])
+            Some(&vec![k("a"), k("b"), k("c")])
         );
 
-        let mut x = Value::Seq(vec!["a".into(), "b".into()]);
-        x.tuple_mut().map(|x| x.push("c".into()));
-        assert_eq!(x.seq(), Some(vec!["a".into(), "b".into(), "c".into()]));
+        let mut x = Value::Seq(vec![k("a"), k("b")]);
+        x.seq_mut().map(|x| x.push(k("c")));
+        assert_eq!(x.seq(), Some(&vec![k("a"), k("b"), k("c")]));
         assert_eq!(
             x.tuple_or_seq(),
-            Some(vec!["a".into(), "b".into(), "c".into()])
+            Some(&vec![k("a"), k("b"), k("c")])
         );
     }
 
@@ -949,9 +954,8 @@ mod tests {
 
     #[test]
     fn cntr_accessor() {
-        let mut x = Value::new_cntr(vec![("a", Kserd::new_num(101))]);
-        let mut accessor = x.cntr_mut();
-        assert_eq!(x.is_some(), true);
-        assert_eq!(x.get_num("a"), Some(101.into()));
+        let x = Value::new_cntr(vec![("a", Kserd::new_num(101))]).unwrap();
+        let accessor = x.cntr().unwrap();
+        assert_eq!(accessor.get_num("a"), Some(101.into()));
     }
 }
