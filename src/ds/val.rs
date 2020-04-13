@@ -488,6 +488,20 @@ impl<'a> Value<'a> {
             _ => None,
         }
     }
+
+    pub fn map(&self) -> Option<&Map<'a>> {
+        match self {
+            Value::Map(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    pub fn map_mut(&mut self) -> Option<&mut Map<'a>> {
+        match self {
+            Value::Map(val) => Some(val),
+            _ => None,
+        }
+    }
 }
 
 /// Conversions.
@@ -631,6 +645,7 @@ impl<'a> fmt::Debug for Value<'a> {
 }
 
 // ########### ACCESSORS ######################################################
+#[derive(Debug, PartialEq)]
 pub struct Accessor<T>(T);
 
 impl<T> Deref for Accessor<T> {
@@ -715,6 +730,22 @@ impl<'a> Accessor<&Fields<'a>> {
     {
         self.get(name).and_then(|k| k.tuple_or_seq())
     }
+
+    pub fn get_cntr<K>(&self, name: &K) -> Option<Accessor<&Fields<'a>>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.cntr())
+    }
+
+    pub fn get_map<K>(&self, name: &K) -> Option<&Map<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.map())
+    }
 }
 
 impl<'a> Accessor<&mut Fields<'a>> {
@@ -742,7 +773,7 @@ impl<'a> Accessor<&mut Fields<'a>> {
         self.get_mut(name).and_then(|k| k.str_mut())
     }
 
-    pub fn get_barr<K>(&mut self, name: &K) -> Option<&mut Vec<u8>>
+    pub fn get_barr_mut<K>(&mut self, name: &K) -> Option<&mut Vec<u8>>
     where
         K: Ord + ?Sized,
         Kstr<'a>: Borrow<K>,
@@ -773,6 +804,22 @@ impl<'a> Accessor<&mut Fields<'a>> {
     {
         self.get_mut(name).and_then(|k| k.tuple_or_seq_mut())
     }
+
+    pub fn get_cntr_mut<K>(&mut self, name: &K) -> Option<Accessor<&mut Fields<'a>>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.cntr_mut())
+    }
+
+    pub fn get_map_mut<K>(&mut self, name: &K) -> Option<&mut Map<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.map_mut())
+    }
 }
 
 #[cfg(test)]
@@ -782,6 +829,24 @@ mod tests {
 
     fn k<'a, T: ToKserd<'a>>(t: T) -> Kserd<'a> {
         t.into_kserd().unwrap()
+    }
+
+    #[test]
+    fn debug_fmt() {
+        let x = Value::new_barr(&[1, 2, 3]);
+        assert_eq!(&format!("{:?}", x), "Barr([1, 2, 3])");
+
+        let x = Value::Seq(vec![k(101)]);
+        assert_eq!(
+            &format!("{:?}", x),
+            r#"[Kserd { id: Some("i32"), val: Num(Int(101)) }]"#
+        );
+
+        let x = Value::new_map(vec![(k(1), k(2))]);
+        assert_eq!(
+            &format!("{:?}", x),
+            r#"{Kserd { id: Some("i32"), val: Num(Int(1)) }: Kserd { id: Some("i32"), val: Num(Int(2)) }}"#
+        );
     }
 
     #[test]
@@ -822,22 +887,24 @@ mod tests {
         let mut x = Value::new_barr([0, 1, 2].as_ref());
         x.barr_mut().map(|x| x.push(3));
         assert_eq!(x.barr(), Some([0, 1, 2, 3].as_ref()));
+        assert_eq!(x.tuple_or_seq(), None);
+        assert_eq!(x.tuple_or_seq_mut(), None);
 
         let mut x = Value::Tuple(vec![k("a"), k("b")]);
         x.tuple_mut().map(|x| x.push(k("c")));
         assert_eq!(x.tuple(), Some(&vec![k("a"), k("b"), k("c")]));
-        assert_eq!(
-            x.tuple_or_seq(),
-            Some(&vec![k("a"), k("b"), k("c")])
-        );
+        assert_eq!(x.seq(), None);
+        assert_eq!(x.seq_mut(), None);
+        assert_eq!(x.tuple_or_seq(), Some(&vec![k("a"), k("b"), k("c")]));
 
         let mut x = Value::Seq(vec![k("a"), k("b")]);
         x.seq_mut().map(|x| x.push(k("c")));
         assert_eq!(x.seq(), Some(&vec![k("a"), k("b"), k("c")]));
-        assert_eq!(
-            x.tuple_or_seq(),
-            Some(&vec![k("a"), k("b"), k("c")])
-        );
+        assert_eq!(x.tuple(), None);
+        assert_eq!(x.tuple_mut(), None);
+        assert_eq!(x.tuple_or_seq(), Some(&vec![k("a"), k("b"), k("c")]));
+        assert_eq!(x.map(), None);
+        assert_eq!(x.map_mut(), None);
     }
 
     #[test]
@@ -954,8 +1021,70 @@ mod tests {
 
     #[test]
     fn cntr_accessor() {
-        let x = Value::new_cntr(vec![("a", Kserd::new_num(101))]).unwrap();
-        let accessor = x.cntr().unwrap();
-        assert_eq!(accessor.get_num("a"), Some(101.into()));
+        let mut x = Value::new_num(101);
+        assert_eq!(x.cntr(), None);
+        assert_eq!(x.cntr_mut(), None);
+
+        let cntr = Value::new_cntr(vec![
+            ("a", Kserd::new_unit()),
+            ("b", Kserd::new_bool(false)),
+            ("c", Kserd::new_num(101)),
+            ("d", Kserd::new_str("hello")),
+            ("e", Kserd::new_barr(&[0])),
+            ("f", Kserd::new(Value::Tuple(vec![k(1)]))),
+            ("g", Kserd::new(Value::Seq(vec![k(2)]))),
+            ("h", Kserd::new_cntr(vec![("a", k(()))]).unwrap()),
+            ("i", Kserd::new_map(vec![(k(()), k(2))])),
+        ])
+        .unwrap();
+
+        let x = cntr.cntr().unwrap();
+
+        assert_eq!(x.get_unit("a"), Some(()));
+        assert_eq!(x.get_num("a"), None);
+        assert_eq!(x.get_bool("b"), Some(false));
+        assert_eq!(x.get_num("c"), Some(101.into()));
+        assert_eq!(x.get_str("d"), Some("hello"));
+        assert_eq!(x.get_barr("e"), Some(&[0u8] as &[u8]));
+        assert_eq!(x.get_tuple("f"), Some(&vec![k(1)]));
+        assert_eq!(x.get_seq("g"), Some(&vec![k(2)]));
+        assert_eq!(x.get_tuple_or_seq("f"), Some(&vec![k(1)]));
+        assert_eq!(x.get_tuple_or_seq("g"), Some(&vec![k(2)]));
+        assert_eq!(x.get_cntr("h").is_some(), true);
+        assert_eq!(x.get_map("i").is_some(), true);
+    }
+
+    #[test]
+    fn cntr_mut_accessor() {
+        let mut x = Value::new_num(101);
+        assert_eq!(x.cntr(), None);
+        assert_eq!(x.cntr_mut(), None);
+
+        let mut cntr = Value::new_cntr(vec![
+            ("a", Kserd::new_unit()),
+            ("b", Kserd::new_bool(false)),
+            ("c", Kserd::new_num(101)),
+            ("d", Kserd::new_str("hello")),
+            ("e", Kserd::new_barr(&[0])),
+            ("f", Kserd::new(Value::Tuple(vec![k(1)]))),
+            ("g", Kserd::new(Value::Seq(vec![k(2)]))),
+            ("h", Kserd::new_cntr(vec![("a", k(()))]).unwrap()),
+            ("i", Kserd::new_map(vec![(k(()), k(2))])),
+        ])
+        .unwrap();
+
+        let mut x = cntr.cntr_mut().unwrap();
+
+        assert_eq!(x.get_num_mut("a"), None);
+        assert_eq!(x.get_bool_mut("b"), Some(&mut false));
+        assert_eq!(x.get_num_mut("c"), Some(&mut 101.into()));
+        assert_eq!(x.get_str_mut("d"), Some(&mut String::from("hello")));
+        assert_eq!(x.get_barr_mut("e"), Some(&mut vec![0u8]));
+        assert_eq!(x.get_tuple_mut("f"), Some(&mut vec![k(1)]));
+        assert_eq!(x.get_seq_mut("g"), Some(&mut vec![k(2)]));
+        assert_eq!(x.get_tuple_or_seq_mut("f"), Some(&mut vec![k(1)]));
+        assert_eq!(x.get_tuple_or_seq_mut("g"), Some(&mut vec![k(2)]));
+        assert_eq!(x.get_cntr_mut("h").is_some(), true);
+        assert_eq!(x.get_map_mut("i").is_some(), true);
     }
 }
