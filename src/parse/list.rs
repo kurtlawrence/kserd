@@ -39,7 +39,7 @@ pub fn tuple<'a, E: ParseError<&'a str>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
-        let (i, ident) = opt(ident(true))(i)?;
+        let (i, ident) = opt(ident(false))(i)?;
 
         let (i, _) = ignore_inline_whitespace(char('('))(i)?; // open with paren
 

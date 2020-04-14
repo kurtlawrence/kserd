@@ -130,6 +130,10 @@ mod tuples {
 
         do_test!("(<something> 123456789, 255)", &ans);
         do_test!("(    <something>  \t\t 123456789  \t,   255 \t\t )", &ans);
+        do_test!(
+            "A-Name (    <something>  \t\t 123456789  \t,   255 \t\t )",
+            &ans
+        );
     }
 
     #[test]
@@ -177,6 +181,12 @@ mod tuples {
 
 
 
+)"#;
+        do_test!(s, &ans);
+        let s = r#"  Some-Name    (
+<something> 123456789
+255
+<last> 100
 )"#;
         do_test!(s, &ans);
     }
@@ -235,6 +245,12 @@ mod containers {
                 map!("a" Kserd::new_unit(), "b" Kserd::new_num(2))
             ))
         );
+        do_test!(
+            "Some-Name(a   =  ()  \t, b \t = \t 2)",
+            &Kserd::new(Value::Cntr(
+                map!("a" Kserd::new_unit(), "b" Kserd::new_num(2))
+            ))
+        );
 
         let primitives = Primitives {
             a: (),
@@ -276,7 +292,7 @@ mod containers {
             wx: ByteArray(&[0, 1, 2, 5, 10, 20, 50, 100]),
         };
 
-        let kserd_ = as_kserd(&primitives);
+        let kserd = as_kserd(&primitives);
 
         let mut config = FormattingConfig {
             id_on_primitives: true,
@@ -285,12 +301,21 @@ mod containers {
         };
 
         config.width_limit = Some(80);
-        let s = kserd_.as_str_with_config(config);
-        do_test!(&s, &kserd_);
+        let s = kserd.as_str_with_config(config);
+        do_test!(&s, &kserd);
 
         config.width_limit = Some(60);
-        let s = kserd_.as_str_with_config(config);
-        do_test!(&s, &kserd_);
+        let s = kserd.as_str_with_config(config);
+        do_test!(&s, &kserd);
+
+        let s = "A-Name (
+        a = 1
+        b = 2
+        )";
+        do_test!(
+            &s,
+            &Kserd::new_cntr(vec![("a", Kserd::new_num(1)), ("b", Kserd::new_num(2))]).unwrap()
+        );
     }
 
     #[test]
@@ -550,6 +575,19 @@ mod seq {
             ..Default::default()
         });
         do_test!(&s, &ans);
+
+        do_test!(
+            "Some-name[-5,-2,-1,0,1,2,5]",
+            &Kserd::new(Value::Seq(vec![
+                Kserd::new(Value::new_num(-5)),
+                Kserd::new(Value::new_num(-2)),
+                Kserd::new(Value::new_num(-1)),
+                Kserd::new(Value::new_num(0)),
+                Kserd::new(Value::new_num(1)),
+                Kserd::new(Value::new_num(2)),
+                Kserd::new(Value::new_num(5)),
+            ]))
+        );
     }
 
     #[test]
@@ -635,6 +673,15 @@ mod map {
             ..Default::default()
         });
         do_test!(&s, &ans);
+
+        do_test!(
+            "A-Crazy-Map {0:1,2:3,4:5}",
+            &Kserd::new(Value::new_map(vec![
+                (n!(0), n!(1)),
+                (n!(2), n!(3)),
+                (n!(4), n!(5))
+            ]))
+        );
     }
 
     #[test]
