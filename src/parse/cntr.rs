@@ -181,15 +181,20 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
             tmp
         };
 
-        if i.is_empty() {
-            return Err(Err::Error(error::make_error(i, ErrorKind::Eof)));
-        }
-
         let (i, _) = expect_indents(indents)(i)?;
-
         let (i, _) = inline_whitespace(i)?; // passed the indent threshold, ignore any extra inline space
-                                            // the thinking is it won't affect parsing, but could affect formatting
+                                            // the thinking is it won't affect parsing,
+                                            // but could affect formatting
                                             // hopefully can write a formatter to prettify it.
+
+        context("verbose container field", |i: &str| {
+            if i.is_empty() || (ignore_inline_whitespace::<_, E, _>(line_ending)(i)).is_ok() {
+                // The line had tabs but is empty of other characters.
+                Err(Err::Error(error::make_error(i, ErrorKind::Eof)))
+            } else {
+                Ok((i, ()))
+            }
+        })(i)?;
 
         if recognise_field_assign(i) {
             let (i, (fname, val)) = kvp_kserdstr_to_kserd(false)(i)?;
@@ -244,8 +249,10 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
 
             Ok((i, ContainerField::NestedVerbose(fname, value)))
         } else {
-            dbg!(i);
-            panic!("not recognised");
+            context(
+                "unmatchable container field. not a direct (=), seq, or map entry",
+                |i| Err(Err::Error(error::make_error(i, ErrorKind::NoneOf))),
+            )(i)
         }
     }
 }

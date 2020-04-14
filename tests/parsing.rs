@@ -47,7 +47,75 @@ fn as_kserd<T: Serialize>(val: &T) -> Kserd<'static> {
     Kserd::enc(val).unwrap()
 }
 
-mod misc {}
+mod misc {
+    use super::*;
+
+    #[test]
+    fn bug_1() {
+        // a more distilled version
+        let s = "a = 101\n\t";
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![("a", Kserd::new_num(101))]).unwrap()
+        );
+
+        let s = "a = 101\n\t\t";
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![("a", Kserd::new_num(101))]).unwrap()
+        );
+
+        let s = "a = 101\n\t\t\nb = 202";
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![("a", Kserd::new_num(101)), ("b", Kserd::new_num(202))]).unwrap()
+        );
+
+        dbg!("here");
+
+        let s = "[[list]]
+\"Hello, world!\"
+
+[[list]]
+\"This is a list\"
+
+[[list]]
+\"as entries\"
+
+[key]
+    inner-item = \"This is a container\"
+    num = 101
+    another = \"more words to write stuff\"
+    byte-array = b91'fdsaljfjdsa'
+\t";
+
+        let kserd = Kserd::new_cntr(vec![
+            (
+                "list",
+                Kserd::new(Value::Seq(vec![
+                    Kserd::new_str("Hello, world!"),
+                    Kserd::new_str("This is a list"),
+                    Kserd::new_str("as entries"),
+                ])),
+            ),
+            (
+                "key",
+                Kserd::new_cntr(vec![
+                    ("inner-item", Kserd::new_str("This is a container")),
+                    ("num", Kserd::new_num(101)),
+                    ("another", Kserd::new_str("more words to write stuff")),
+                    (
+                        "byte-array",
+                        Kserd::new_barr(&[110, 74, 45, 89, 50, 72, 22, 252, 52]),
+                    ),
+                ])
+                .unwrap(),
+            ),
+        ])
+        .unwrap();
+        do_test!(s, &kserd);
+    }
+}
 
 mod prims {
     use super::*;
@@ -533,6 +601,35 @@ mod containers {
         let mut map = BTreeMap::new();
         map.insert("a".into(), Kserd::new_num(1));
         do_test!("a = 1", &Kserd::new(Value::Cntr(map)));
+    }
+
+    #[test]
+    fn test_cntr_verbose06() {
+        let s = "a = 101
+        
+        b = 202
+        c
+        d = 404";
+        let err = parse(s).unwrap_err().backtrace();
+        assert_eq!(
+            err,
+            "#0: at 4:9 :: in Eof
+        c
+        ^"
+        );
+    }
+
+    #[test]
+    fn test_cntr_verbose07() {
+        // notice the indent
+        let s = "a = 101
+        
+        b = 202";
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![("a", Kserd::new_num(101)), ("b", Kserd::new_num(202)),])
+                .unwrap()
+        );
     }
 }
 
