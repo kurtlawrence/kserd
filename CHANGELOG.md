@@ -1,4 +1,11 @@
 
+# Updates
+- Add `Borrow` trait to `Kstr`
+- Added the container `Accessor` API
+- Fix parsing of named tuples
+- Fix parsing bug in containers
+- Add ability to name containers using `:name` syntax
+
 # 0.3.0
 - Rename `ParseErr` to `Error`
 - Rename internal items to make clippy happy
