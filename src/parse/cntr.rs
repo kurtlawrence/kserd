@@ -104,44 +104,55 @@ pub fn verbose<'a, E: ParseError<&'a str>>(
         let mut seqs = BTreeMap::new();
         let mut maps = BTreeMap::new();
         let mut rfields = BTreeMap::new();
-        let mut id = None;
+        let mut identity = None;
 
         for field in fields {
             match field {
-                ContainerField::Id(x) => id = Some(x),
+                ContainerField::Id(id) => identity = Some(id),
                 ContainerField::Direct(name, value) => {
                     rfields.insert(name, value);
                 }
                 ContainerField::NestedVerbose(name, value) => {
                     rfields.insert(name, value);
                 }
-                ContainerField::SeqEntry(name, value) => {
-                    seqs.entry(name).or_insert_with(Vec::new).push(value);
+                ContainerField::SeqEntry {
+                    id,
+                    field_name,
+                    value,
+                } => {
+                    let (x, seq) = seqs.entry(field_name).or_insert_with(|| (None, Vec::new()));
+                    *x = id.or(x.take());
+                    seq.push(value);
                 }
                 ContainerField::MapEntry {
+                    id,
                     field_name,
                     key,
                     value,
                 } => {
-                    maps.entry(field_name)
-                        .or_insert_with(BTreeMap::new)
-                        .insert(key, value);
+                    let (x, map) = maps
+                        .entry(field_name)
+                        .or_insert_with(|| (None, BTreeMap::new()));
+                    *x = id.or(x.take());
+                    map.insert(key, value);
                 }
             }
         }
 
-        for (name, seq) in seqs {
-            let val = Kserd::new(Value::Seq(seq));
+        for (name, (id, seq)) in seqs {
+            let mut val = Kserd::new(Value::Seq(seq));
+            val.id = id;
             rfields.insert(name, val);
         }
 
-        for (name, map) in maps {
-            let val = Kserd::new(Value::Map(map));
+        for (name, (id, map)) in maps {
+            let mut val = Kserd::new(Value::Map(map));
+            val.id = id;
             rfields.insert(name, val);
         }
 
         let mut kserd = Kserd::new(Value::Cntr(rfields));
-        kserd.id = id;
+        kserd.id = identity;
 
         Ok((i, kserd))
     }
@@ -154,8 +165,13 @@ enum ContainerField<'a> {
     Id(Kstr<'a>),
     Direct(Kstr<'a>, Kserd<'a>),
     NestedVerbose(Kstr<'a>, Kserd<'a>),
-    SeqEntry(Kstr<'a>, Kserd<'a>),
+    SeqEntry {
+        id: Option<Kstr<'a>>,
+        field_name: Kstr<'a>,
+        value: Kserd<'a>,
+    },
     MapEntry {
+        id: Option<Kstr<'a>>,
         field_name: Kstr<'a>,
         key: Kserd<'a>,
         value: Kserd<'a>,
@@ -201,7 +217,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
             let (i, (fname, val)) = kvp_kserdstr_to_kserd(false)(i)?;
             Ok((i, ContainerField::Direct(fname, val)))
         } else if i.starts_with("[[") {
-            let (i, (fname, identity)) = preceded(
+            let (i, (field_name, id)) = preceded(
                 tag("[["),
                 terminated(
                     verbose_field_name_and_identity,
@@ -232,14 +248,22 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                     )),
                 )(i)?;
                 let entry = ContainerField::MapEntry {
-                    field_name: fname,
+                    id,
+                    field_name,
                     key,
                     value,
                 };
                 Ok((i, entry))
             } else {
                 let (i, value) = context("verbose sequence entry", kserd_nested(indents + 1))(i)?;
-                Ok((i, ContainerField::SeqEntry(fname, value)))
+                Ok((
+                    i,
+                    ContainerField::SeqEntry {
+                        id,
+                        field_name,
+                        value,
+                    },
+                ))
             }
         } else if i.starts_with("[") {
             let (i, (fname, identity)) = preceded(
@@ -252,7 +276,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
             // must be a new line after a field name []
             let (i, _) = ignore_inline_whitespace(line_ending)(i)?;
             let (i, mut value) = context("nested container", kserd_nested(indents + 1))(i)?;
-            value.id = identity;
+            value.id = value.id.or(identity); // prioritise ids that come as rows
 
             Ok((i, ContainerField::NestedVerbose(fname, value)))
         } else {
