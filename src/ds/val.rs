@@ -1,7 +1,10 @@
 use super::*;
-use crate::Fields;
-use std::borrow::Cow;
-use std::{error, fmt};
+use crate::{Fields, List, Map};
+use std::{
+    borrow::{Borrow, Cow},
+    error, fmt,
+    ops::{Deref, DerefMut},
+};
 
 /// The value of a [`Kserd`].
 ///
@@ -61,7 +64,7 @@ pub enum Value<'a> {
     /// It shares the same in-memory representation as a sequence but has different formatting
     /// syntax. Tuples represent not only anonymous tuples (`(u32, u32, u32)`) but also newtype structs and
     /// enums (ie `Point3d(u32, u32, u32)`).
-    Tuple(Vec<Kserd<'a>>),
+    Tuple(List<'a>),
     /// A container value.
     ///
     /// A container is a _hetrogeneous collection of named objects_.
@@ -70,11 +73,11 @@ pub enum Value<'a> {
     /// A sequence of values.
     ///
     /// A sequence is a _homogeneous sequence of unnamed objects_.
-    Seq(Vec<Kserd<'a>>),
+    Seq(List<'a>),
     /// A map of values.
     ///
     /// A map is a _homogeneous mapping of keys to values_.
-    Map(BTreeMap<Kserd<'a>, Kserd<'a>>),
+    Map(Map<'a>),
 }
 
 /// The field name in a container contains invalid characters.
@@ -236,8 +239,6 @@ impl<'a> Value<'a> {
 }
 
 /// Convenience methods for accessing values straight from the [`Value`] enum.
-///
-/// [`Value`]: crate::Value
 impl<'a> Value<'a> {
     /// `Value` is a unit value (`Value::Unit`).
     ///
@@ -431,6 +432,200 @@ impl<'a> Value<'a> {
             _ => None,
         }
     }
+
+    /// `Value` is a tuple.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let value = Value::Tuple(vec![Kserd::new_num(101)]);
+    /// assert_eq!(value.tuple(), Some(&vec![Kserd::new_num(101)]));
+    /// ```
+    pub fn tuple(&self) -> Option<&List<'a>> {
+        match self {
+            Value::Tuple(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a tuple. Can be altered.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let mut value = Value::Tuple(vec![Kserd::new_num(101)]);
+    /// value.tuple_mut().map(|x| x.push(Kserd::new_str("Hello")));
+    /// assert_eq!(
+    ///     value.tuple(),
+    ///     Some(&vec![Kserd::new_num(101), Kserd::new_str("Hello")])
+    /// );
+    /// ```
+    pub fn tuple_mut(&mut self) -> Option<&mut List<'a>> {
+        match self {
+            Value::Tuple(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a container.
+    ///
+    /// Returns an [`Accessor`] into the fields, which has utility methods for accessing the
+    /// fields.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let value = Value::new_cntr(vec![("a", Kserd::new_num(101))]).unwrap();
+    /// let accessor = value.cntr().unwrap();
+    /// assert_eq!(accessor.get_num("a"), Some(101.into()));
+    /// ```
+    pub fn cntr(&self) -> Option<Accessor<&Fields<'a>>> {
+        match self {
+            Value::Cntr(fields) => Some(Accessor(fields)),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a container. Can be altered.
+    ///
+    /// Returns an [`Accessor`] into the fields, which has utility methods for accessing the
+    /// fields.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let mut value = Value::new_cntr(vec![("a", Kserd::new_num(101))]).unwrap();
+    /// let mut accessor = value.cntr_mut().unwrap();
+    /// accessor.get_num_mut("a").map(|x| *x = 1.into());
+    /// assert_eq!(value, Value::new_cntr(vec![("a", Kserd::new_num(1))]).unwrap());
+    /// ```
+    pub fn cntr_mut(&mut self) -> Option<Accessor<&mut Fields<'a>>> {
+        match self {
+            Value::Cntr(fields) => Some(Accessor(fields)),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a sequence.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let value = Value::Seq(vec![Kserd::new_num(101)]);
+    /// assert_eq!(value.seq(), Some(&vec![Kserd::new_num(101)]));
+    /// ```
+    pub fn seq(&self) -> Option<&List<'a>> {
+        match self {
+            Value::Seq(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a sequence. Can be altered.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let mut value = Value::Seq(vec![Kserd::new_num(101)]);
+    /// value.seq_mut().map(|x| x.push(Kserd::new_str("Hello")));
+    /// assert_eq!(
+    ///     value.seq(),
+    ///     Some(&vec![Kserd::new_num(101), Kserd::new_str("Hello")])
+    /// );
+    /// ```
+    pub fn seq_mut(&mut self) -> Option<&mut List<'a>> {
+        match self {
+            Value::Seq(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a tuple or a sequence.
+    ///
+    /// As tuple and sequence share the same backing store, testing for either can be useful.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let value = Value::Seq(vec![Kserd::new_num(101)]);
+    /// assert_eq!(value.tuple_or_seq(), Some(&vec![Kserd::new_num(101)]));
+    /// ```
+    pub fn tuple_or_seq(&self) -> Option<&List<'a>> {
+        match self {
+            Value::Tuple(x) | Value::Seq(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a tuple or a sequence. Can be altered.
+    ///
+    /// As tuple and sequence share the same backing store, testing for either can be useful.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let mut value = Value::Tuple(vec![Kserd::new_num(101)]);
+    /// value.tuple_or_seq_mut().map(|x| x.push(Kserd::new_str("Hello")));
+    /// assert_eq!(
+    ///     value.tuple_or_seq(),
+    ///     Some(&vec![Kserd::new_num(101), Kserd::new_str("Hello")])
+    /// );
+    /// ```
+    pub fn tuple_or_seq_mut(&mut self) -> Option<&mut List<'a>> {
+        match self {
+            Value::Tuple(x) | Value::Seq(x) => Some(x),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a map.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let value = Value::new_map(vec![(
+    ///     Kserd::new_str("a"),
+    ///     Kserd::new_num(3.14)
+    /// )]);
+    /// let num = value.map().and_then(|map| {
+    ///     map.get(&Kserd::new_str("a"))
+    /// });
+    /// assert_eq!(num, Some(&Kserd::new_num(3.14)));
+    /// ```
+    pub fn map(&self) -> Option<&Map<'a>> {
+        match self {
+            Value::Map(val) => Some(val),
+            _ => None,
+        }
+    }
+
+    /// `Value` is a map. Can be altered.
+    ///
+    /// # Example
+    /// ```rust
+    /// # use kserd::*;
+    /// let mut value = Value::new_map(vec![(
+    ///     Kserd::new_str("a"),
+    ///     Kserd::new_num(3.14)
+    /// )]);
+    ///
+    /// value.map_mut().and_then(|map| {
+    ///     map.get_mut(&Kserd::new_str("a"))
+    /// }).map(|x| *x = Kserd::new_str("Hello"));
+    ///
+    /// let expect = Value::new_map(vec![(
+    ///     Kserd::new_str("a"),
+    ///     Kserd::new_str("Hello")
+    /// )]);
+    ///
+    /// assert_eq!(value, expect);
+    /// ```
+    pub fn map_mut(&mut self) -> Option<&mut Map<'a>> {
+        match self {
+            Value::Map(val) => Some(val),
+            _ => None,
+        }
+    }
 }
 
 /// Conversions.
@@ -573,9 +768,269 @@ impl<'a> fmt::Debug for Value<'a> {
     }
 }
 
+// ########### ACCESSORS ######################################################
+/// `Accessor` provides a wrapper around a value, adding additional accessing methods.
+///
+/// # Containers
+/// A container accessor can be constructed through [`Value::cntr`] or [`Value::cntr_mut`]. These
+/// give you immutable or mutable access to the underlying map store, along with additional methods
+/// for accessing an entry if it matches the name + the type of [`Value`].
+///
+/// # Example
+/// ```rust
+/// # use kserd::*;
+/// let mut cntr = Value::new_cntr(vec![
+///     ("a", Kserd::new_str("Hello")),
+///     ("b", Kserd::new_num(101))
+/// ]).unwrap();
+///
+/// let mut accessor = cntr.cntr_mut().unwrap();
+///
+/// assert_eq!(accessor.get_str("a"), Some("Hello"));
+/// assert_eq!(accessor.get_str("b"), None); // not a string
+/// assert_eq!(accessor.get_num("b"), Some(101.into()));
+///
+/// // mutating is also possible
+/// accessor.get_str_mut("a").map(|s| s.push_str(", world!"));
+///
+/// assert_eq!(accessor.get_str("a"), Some("Hello, world!"));
+/// ```
+#[derive(Debug, PartialEq)]
+pub struct Accessor<T>(T);
+
+impl<T> Deref for Accessor<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for Accessor<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
+    }
+}
+
+/// **Immutable access to a container's fields.**
+impl<'a, T> Accessor<T>
+where
+    T: Deref<Target = Fields<'a>>,
+{
+    /// Returns if the container has a unit value along the key `name`.
+    pub fn get_unit<K>(&self, name: &K) -> Option<()>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name)
+            .and_then(|v| if v.unit() { Some(()) } else { None })
+    }
+
+    /// Returns if the container has a boolean value along the key `name`.
+    pub fn get_bool<K>(&self, name: &K) -> Option<bool>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|v| v.bool())
+    }
+
+    /// Returns if the container has a numeric value along the key `name`.
+    pub fn get_num<K>(&self, name: &K) -> Option<Number>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| match &k.val {
+            Value::Num(n) => Some(*n),
+            _ => None,
+        })
+    }
+
+    /// Returns if the container has a string value along the key `name`.
+    pub fn get_str<'b, K>(&'b self, name: &K) -> Option<&'b str>
+    where
+        'a: 'b,
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.str())
+    }
+
+    /// Returns if the container has a byte array value along the key `name`.
+    pub fn get_barr<'b, K>(&'b self, name: &K) -> Option<&'b [u8]>
+    where
+        'a: 'b,
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.barr())
+    }
+
+    /// Returns if the container has a tuple value along the key `name`.
+    pub fn get_tuple<K>(&self, name: &K) -> Option<&List<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.tuple())
+    }
+
+    /// Returns if the container has a sequence value along the key `name`.
+    pub fn get_seq<K>(&self, name: &K) -> Option<&List<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.seq())
+    }
+
+    /// Returns if the container has a tuple or sequence value along the key `name`.
+    pub fn get_tuple_or_seq<K>(&self, name: &K) -> Option<&List<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.tuple_or_seq())
+    }
+
+    /// Returns if the container has a container value along the key `name`.
+    pub fn get_cntr<K>(&self, name: &K) -> Option<Accessor<&Fields<'a>>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.cntr())
+    }
+
+    /// Returns if the container has a map value along the key `name`.
+    pub fn get_map<K>(&self, name: &K) -> Option<&Map<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get(name).and_then(|k| k.map())
+    }
+}
+
+/// **Mutable access to a container's fields.**
+impl<'a, T> Accessor<T>
+where
+    T: DerefMut<Target = Fields<'a>>,
+{
+    /// Returns if the container has a boolean value along the key `name`.
+    pub fn get_bool_mut<'b, K>(&'b mut self, name: &K) -> Option<&'b mut bool>
+    where
+        'a: 'b,
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|v| v.bool_mut())
+    }
+
+    /// Returns if the container has a numeric value along the key `name`.
+    pub fn get_num_mut<'b, K>(&'b mut self, name: &K) -> Option<&'b mut Number>
+    where
+        'a: 'b,
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.num_mut())
+    }
+
+    /// Returns if the container has a string value along the key `name`.
+    pub fn get_str_mut<'b, K>(&'b mut self, name: &K) -> Option<&'b mut String>
+    where
+        'a: 'b,
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.str_mut())
+    }
+
+    /// Returns if the container has a byte array value along the key `name`.
+    pub fn get_barr_mut<'b, K>(&'b mut self, name: &K) -> Option<&'b mut Vec<u8>>
+    where
+        'a: 'b,
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.barr_mut())
+    }
+
+    /// Returns if the container has a tuple value along the key `name`.
+    pub fn get_tuple_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.tuple_mut())
+    }
+
+    /// Returns if the container has a sequence value along the key `name`.
+    pub fn get_seq_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.seq_mut())
+    }
+
+    /// Returns if the container has a tuple or sequence value along the key `name`.
+    pub fn get_tuple_or_seq_mut<K>(&mut self, name: &K) -> Option<&mut List<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.tuple_or_seq_mut())
+    }
+
+    /// Returns if the container has a container value along the key `name`.
+    pub fn get_cntr_mut<K>(&mut self, name: &K) -> Option<Accessor<&mut Fields<'a>>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.cntr_mut())
+    }
+
+    /// Returns if the container has a map value along the key `name`.
+    pub fn get_map_mut<K>(&mut self, name: &K) -> Option<&mut Map<'a>>
+    where
+        K: Ord + ?Sized,
+        Kstr<'a>: Borrow<K>,
+    {
+        self.get_mut(name).and_then(|k| k.map_mut())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ToKserd;
+
+    fn k<'a, T: ToKserd<'a>>(t: T) -> Kserd<'a> {
+        t.into_kserd().unwrap()
+    }
+
+    #[test]
+    fn debug_fmt() {
+        let x = Value::new_barr(&[1, 2, 3]);
+        assert_eq!(&format!("{:?}", x), "Barr([1, 2, 3])");
+
+        let x = Value::Seq(vec![k(101)]);
+        assert_eq!(
+            &format!("{:?}", x),
+            r#"[Kserd { id: Some("i32"), val: Num(Int(101)) }]"#
+        );
+
+        let x = Value::new_map(vec![(k(1), k(2))]);
+        assert_eq!(
+            &format!("{:?}", x),
+            r#"{Kserd { id: Some("i32"), val: Num(Int(1)) }: Kserd { id: Some("i32"), val: Num(Int(2)) }}"#
+        );
+    }
 
     #[test]
     fn invalid_field_test() {
@@ -615,6 +1070,24 @@ mod tests {
         let mut x = Value::new_barr([0, 1, 2].as_ref());
         x.barr_mut().map(|x| x.push(3));
         assert_eq!(x.barr(), Some([0, 1, 2, 3].as_ref()));
+        assert_eq!(x.tuple_or_seq(), None);
+        assert_eq!(x.tuple_or_seq_mut(), None);
+
+        let mut x = Value::Tuple(vec![k("a"), k("b")]);
+        x.tuple_mut().map(|x| x.push(k("c")));
+        assert_eq!(x.tuple(), Some(&vec![k("a"), k("b"), k("c")]));
+        assert_eq!(x.seq(), None);
+        assert_eq!(x.seq_mut(), None);
+        assert_eq!(x.tuple_or_seq(), Some(&vec![k("a"), k("b"), k("c")]));
+
+        let mut x = Value::Seq(vec![k("a"), k("b")]);
+        x.seq_mut().map(|x| x.push(k("c")));
+        assert_eq!(x.seq(), Some(&vec![k("a"), k("b"), k("c")]));
+        assert_eq!(x.tuple(), None);
+        assert_eq!(x.tuple_mut(), None);
+        assert_eq!(x.tuple_or_seq(), Some(&vec![k("a"), k("b"), k("c")]));
+        assert_eq!(x.map(), None);
+        assert_eq!(x.map_mut(), None);
     }
 
     #[test]
@@ -727,5 +1200,87 @@ mod tests {
 
         let nested_owned = nested.clone().into_owned();
         assert_eq!(nested, nested_owned);
+    }
+
+    #[test]
+    fn cntr_accessor() {
+        let mut x = Value::new_num(101);
+        assert_eq!(x.cntr(), None);
+        assert_eq!(x.cntr_mut(), None);
+
+        let cntr = Value::new_cntr(vec![
+            ("a", Kserd::new_unit()),
+            ("b", Kserd::new_bool(false)),
+            ("c", Kserd::new_num(101)),
+            ("d", Kserd::new_str("hello")),
+            ("e", Kserd::new_barr(&[0])),
+            ("f", Kserd::new(Value::Tuple(vec![k(1)]))),
+            ("g", Kserd::new(Value::Seq(vec![k(2)]))),
+            ("h", Kserd::new_cntr(vec![("a", k(()))]).unwrap()),
+            ("i", Kserd::new_map(vec![(k(()), k(2))])),
+        ])
+        .unwrap();
+
+        let x = cntr.cntr().unwrap();
+
+        assert_eq!(x.get_unit("a"), Some(()));
+        assert_eq!(x.get_num("a"), None);
+        assert_eq!(x.get_bool("b"), Some(false));
+        assert_eq!(x.get_num("c"), Some(101.into()));
+        assert_eq!(x.get_str("d"), Some("hello"));
+        assert_eq!(x.get_barr("e"), Some(&[0u8] as &[u8]));
+        assert_eq!(x.get_tuple("f"), Some(&vec![k(1)]));
+        assert_eq!(x.get_seq("g"), Some(&vec![k(2)]));
+        assert_eq!(x.get_tuple_or_seq("f"), Some(&vec![k(1)]));
+        assert_eq!(x.get_tuple_or_seq("g"), Some(&vec![k(2)]));
+        assert_eq!(x.get_cntr("h").is_some(), true);
+        assert_eq!(x.get_map("i").is_some(), true);
+    }
+
+    #[test]
+    fn cntr_mut_accessor() {
+        let mut x = Value::new_num(101);
+        assert_eq!(x.cntr(), None);
+        assert_eq!(x.cntr_mut(), None);
+
+        let mut cntr = Value::new_cntr(vec![
+            ("a", Kserd::new_unit()),
+            ("b", Kserd::new_bool(false)),
+            ("c", Kserd::new_num(101)),
+            ("d", Kserd::new_str("hello")),
+            ("e", Kserd::new_barr(&[0])),
+            ("f", Kserd::new(Value::Tuple(vec![k(1)]))),
+            ("g", Kserd::new(Value::Seq(vec![k(2)]))),
+            ("h", Kserd::new_cntr(vec![("a", k(()))]).unwrap()),
+            ("i", Kserd::new_map(vec![(k(()), k(2))])),
+        ])
+        .unwrap();
+
+        let mut x = cntr.cntr_mut().unwrap();
+
+        assert_eq!(x.get_num_mut("a"), None);
+        assert_eq!(x.get_bool_mut("b"), Some(&mut false));
+        assert_eq!(x.get_num_mut("c"), Some(&mut 101.into()));
+        assert_eq!(x.get_str_mut("d"), Some(&mut String::from("hello")));
+        assert_eq!(x.get_barr_mut("e"), Some(&mut vec![0u8]));
+        assert_eq!(x.get_tuple_mut("f"), Some(&mut vec![k(1)]));
+        assert_eq!(x.get_seq_mut("g"), Some(&mut vec![k(2)]));
+        assert_eq!(x.get_tuple_or_seq_mut("f"), Some(&mut vec![k(1)]));
+        assert_eq!(x.get_tuple_or_seq_mut("g"), Some(&mut vec![k(2)]));
+        assert_eq!(x.get_cntr_mut("h").is_some(), true);
+        assert_eq!(x.get_map_mut("i").is_some(), true);
+    }
+
+    #[test]
+    fn accessor_both() {
+        let mut x = Value::new_cntr(vec![("a", Kserd::new_str("Hello"))]).unwrap();
+
+        let mut accessor = x.cntr_mut().unwrap();
+
+        assert_eq!(accessor.get_str("a"), Some("Hello"));
+
+        accessor.get_str_mut("a").map(|s| s.push_str(", world!"));
+
+        assert_eq!(accessor.get_str("a"), Some("Hello, world!"));
     }
 }

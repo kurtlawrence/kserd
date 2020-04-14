@@ -81,7 +81,9 @@ pub use self::{
     to_kserd::{ToKserd, ToKserdErr},
 };
 
+type List<'a> = Vec<Kserd<'a>>;
 type Fields<'a> = std::collections::BTreeMap<Kstr<'a>, Kserd<'a>>;
+type Map<'a> = std::collections::BTreeMap<Kserd<'a>, Kserd<'a>>;
 
 // **************** encode **********************
 

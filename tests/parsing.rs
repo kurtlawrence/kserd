@@ -625,7 +625,7 @@ mod map {
 
         let ans = Kserd::with_id(
             "map",
-            Value::new_map(encode_map([(0, 1), (2, 3), (4, 5)].into_iter())),
+            Value::new_map(encode_map([(0, 1), (2, 3), (4, 5)].iter())),
         )
         .unwrap();
         let s = ans.as_str_with_config(FormattingConfig {
@@ -665,7 +665,7 @@ mod map {
 
         let ans = Kserd::with_id(
             "map",
-            Value::new_map(encode_map([(0, 1), (2, 3), (4, 5)].into_iter())),
+            Value::new_map(encode_map([(0, 1), (2, 3), (4, 5)].iter())),
         )
         .unwrap();
         let s = ans.as_str_with_config(FormattingConfig {
