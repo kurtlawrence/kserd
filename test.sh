@@ -21,4 +21,4 @@ cargo check --no-default-features --features="parse"
 cargo test --all-features
 
 # Run cargo docs and ensure the linking is working
-cargo doc
+cargo doc --no-deps

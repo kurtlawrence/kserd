@@ -102,8 +102,7 @@ pub fn recognise_concise(i: &str) -> bool {
     const SKIP: &str = " \t\r";
 
     i.chars()
-        .skip_while(|&c| SKIP.contains(c))
-        .next()
+        .find(|&c| !SKIP.contains(c))
         .map(|c| c == '\n')
         .unwrap_or(false)
 }
