@@ -79,15 +79,11 @@ impl<'a> Error<'a> {
     ///            (2,3]
     ///             ^
     ///
-    /// #2: at 2:9 :: in newline separated (concise) kserds
+    /// #2: at 2:9 :: in multi-line (concise) sequence
     /// list = [
     ///         ^
     ///
-    /// #3: at 2:9 :: in concise sequence
-    /// list = [
-    ///         ^
-    ///
-    /// #4: at 2:1 :: in kserdstr-kserd key-value pair
+    /// #3: at 2:1 :: in name-kserd key value pair
     /// list = [
     /// ^"##
     /// );
@@ -400,6 +396,38 @@ mod tests {
                 &VerboseErrorKind::Nom(nom::error::ErrorKind::Alt)
             ),
             "in Alt"
+        );
+    }
+
+    #[test]
+    fn backtrace_msg() {
+        let string = "
+list = [
+    (0,1)
+    (2,3]
+]";
+
+        let fail = parse::parse(string).unwrap_err();
+
+        println!("{}", fail.backtrace());
+
+        assert_eq!(
+            &fail.backtrace(),
+            r##"#0: at 4:9 :: expected ')', found ']'
+    (2,3]
+        ^
+
+#1: at 4:6 :: in inline tuple
+    (2,3]
+     ^
+
+#2: at 2:9 :: in multi-line (concise) sequence
+list = [
+        ^
+
+#3: at 2:1 :: in name-kserd key value pair
+list = [
+^"##
         );
     }
 }

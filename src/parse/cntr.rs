@@ -4,22 +4,18 @@ use super::*;
 fn kvp_kserdstr_to_kserd<'a, E: ParseError<&'a str>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, (Kstr<'a>, Kserd<'a>), E> {
-    move |input: &'a str| {
-        let value_parser = if force_inline {
-            kserd_inline
-        } else {
-            kserd_concise
-        };
-
-        context(
-            "kserdstr-kserd key-value pair",
-            separated_pair(
-                field_name,
-                ignore_inline_whitespace(char('=')),
-                cut(ignore_inline_whitespace(value_parser)),
-            ),
-        )(input)
-    }
+    context(
+        "name-kserd key value pair",
+        separated_pair(
+            field_name,
+            ignore_inline_whitespace(char('=')),
+            ignore_inline_whitespace(cut(if force_inline {
+                kserd_inline
+            } else {
+                kserd_concise
+            })),
+        ),
+    )
 }
 
 /// Comma separated key-value pairs, where key is `Kstr` and value are `Kserd`.
@@ -75,10 +71,7 @@ pub fn delimited<'a, E: ParseError<&'a str>>(
             "inline container"
         };
 
-        let (i, value) = context(
-            ctx,
-            cut(terminated(parser, ignore_inline_whitespace(char(')')))),
-        )(i)?;
+        let (i, value) = context(ctx, terminated(parser, ignore_inline_whitespace(char(')'))))(i)?;
 
         let value = Value::Cntr(BTreeMap::from_iter(value));
 
@@ -111,50 +104,74 @@ pub fn verbose<'a, E: ParseError<&'a str>>(
         let mut seqs = BTreeMap::new();
         let mut maps = BTreeMap::new();
         let mut rfields = BTreeMap::new();
+        let mut identity = None;
 
         for field in fields {
             match field {
+                ContainerField::Id(id) => identity = Some(id),
                 ContainerField::Direct(name, value) => {
                     rfields.insert(name, value);
                 }
                 ContainerField::NestedVerbose(name, value) => {
                     rfields.insert(name, value);
                 }
-                ContainerField::SeqEntry(name, value) => {
-                    seqs.entry(name).or_insert_with(Vec::new).push(value);
+                ContainerField::SeqEntry {
+                    id,
+                    field_name,
+                    value,
+                } => {
+                    let (x, seq) = seqs.entry(field_name).or_insert_with(|| (None, Vec::new()));
+                    *x = id.or_else(|| x.take());
+                    seq.push(value);
                 }
                 ContainerField::MapEntry {
+                    id,
                     field_name,
                     key,
                     value,
                 } => {
-                    maps.entry(field_name)
-                        .or_insert_with(BTreeMap::new)
-                        .insert(key, value);
+                    let (x, map) = maps
+                        .entry(field_name)
+                        .or_insert_with(|| (None, BTreeMap::new()));
+                    *x = id.or_else(|| x.take());
+                    map.insert(key, value);
                 }
             }
         }
 
-        for (name, seq) in seqs {
-            let val = Kserd::new(Value::Seq(seq));
+        for (name, (id, seq)) in seqs {
+            let mut val = Kserd::new(Value::Seq(seq));
+            val.id = id;
             rfields.insert(name, val);
         }
 
-        for (name, map) in maps {
-            let val = Kserd::new(Value::Map(map));
+        for (name, (id, map)) in maps {
+            let mut val = Kserd::new(Value::Map(map));
+            val.id = id;
             rfields.insert(name, val);
         }
 
-        Ok((i, Kserd::new(Value::Cntr(rfields))))
+        let mut kserd = Kserd::new(Value::Cntr(rfields));
+        kserd.id = identity;
+
+        Ok((i, kserd))
     }
 }
 
+/// Generally the `Kstr` is the field name, except for maps which have to be a little more
+/// explicit.
 #[derive(Debug)]
 enum ContainerField<'a> {
+    Id(Kstr<'a>),
     Direct(Kstr<'a>, Kserd<'a>),
     NestedVerbose(Kstr<'a>, Kserd<'a>),
-    SeqEntry(Kstr<'a>, Kserd<'a>),
+    SeqEntry {
+        id: Option<Kstr<'a>>,
+        field_name: Kstr<'a>,
+        value: Kserd<'a>,
+    },
     MapEntry {
+        id: Option<Kstr<'a>>,
         field_name: Kstr<'a>,
         key: Kserd<'a>,
         value: Kserd<'a>,
@@ -187,65 +204,79 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                                             // but could affect formatting
                                             // hopefully can write a formatter to prettify it.
 
-        context("verbose container field", |i: &str| {
-            if i.is_empty() || (ignore_inline_whitespace::<_, E, _>(line_ending)(i)).is_ok() {
-                // The line had tabs but is empty of other characters.
-                Err(Err::Error(error::make_error(i, ErrorKind::Eof)))
-            } else {
-                Ok((i, ()))
-            }
-        })(i)?;
+        if i.is_empty() || (ignore_inline_whitespace::<_, E, _>(line_ending)(i)).is_ok() {
+            // The line had tabs but is empty of other characters.
+            return Err(Err::Error(error::make_error(i, ErrorKind::Eof)));
+        }
 
-        if recognise_field_assign(i) {
+        // can use starts_with as all whitespace should be removed.
+        if i.starts_with(':') {
+            let (i, identity) = ignore_inline_whitespace(ident(false))(&i[1..])?;
+            Ok((i, ContainerField::Id(identity)))
+        } else if recognise_field_assign(i) {
             let (i, (fname, val)) = kvp_kserdstr_to_kserd(false)(i)?;
             Ok((i, ContainerField::Direct(fname, val)))
-        } else if tag::<_, _, ()>("[[")(i).is_ok() {
-            let (i, (fname, identity)) = preceded(
+        } else if i.starts_with("[[") {
+            let (i, (field_name, id)) = preceded(
                 tag("[["),
-                cut(terminated(verbose_field_name_and_identity, tag("]]"))),
+                terminated(
+                    verbose_field_name_and_identity,
+                    ignore_inline_whitespace(tag("]]")),
+                ),
             )(i)?;
-            let (i, _) = ignore_inline_whitespace(line_ending)(i)?; // must be a new line after a field name [[]]
+            // must be a new line after a field name [[]]
+            let (i, _) = ignore_inline_whitespace(line_ending)(i)?;
 
             // now work out if it is a map or just sequence.
             // a map as the usual inline kserd, followed by the colon.
 
-            let (i, key) = match terminated::<_, _, _, (), _, _>(
-                terminated(kserd_inline, ignore_inline_whitespace(char(':'))),
-                ignore_inline_whitespace(line_ending),
-            )(i)
-            {
-                Ok((ii, key)) => (ii, Some(key)),
-                Err(_) => (i, None),
-            };
-
-            let ctx = if key.is_some() {
-                "verbose map entry"
-            } else {
-                "verbose sequence entry"
-            };
-            let (i, mut value) = context(ctx, cut(kserd_nested(indents + 1)))(i)?;
-            value.id = identity;
+            // get the key (kserd-inline:)
+            let (i, key) = opt(terminated(
+                ignore_inline_whitespace(uncut(kserd_inline)),
+                ignore_inline_whitespace(char(':')),
+            ))(i)?;
 
             if let Some(key) = key {
+                let (i, value) = context(
+                    "verbose map entry",
+                    alt((
+                        ignore_inline_whitespace(kserd_concise),
+                        preceded(
+                            ignore_inline_whitespace(line_ending),
+                            kserd_nested(indents + 1),
+                        ),
+                    )),
+                )(i)?;
+                let entry = ContainerField::MapEntry {
+                    id,
+                    field_name,
+                    key,
+                    value,
+                };
+                Ok((i, entry))
+            } else {
+                let (i, value) = context("verbose sequence entry", kserd_nested(indents + 1))(i)?;
                 Ok((
                     i,
-                    ContainerField::MapEntry {
-                        field_name: fname,
-                        key,
+                    ContainerField::SeqEntry {
+                        id,
+                        field_name,
                         value,
                     },
                 ))
-            } else {
-                Ok((i, ContainerField::SeqEntry(fname, value)))
             }
-        } else if tag::<_, _, ()>("[")(i).is_ok() {
+        } else if i.starts_with('[') {
             let (i, (fname, identity)) = preceded(
                 tag("["),
-                cut(terminated(verbose_field_name_and_identity, tag("]"))),
+                terminated(
+                    verbose_field_name_and_identity,
+                    ignore_inline_whitespace(tag("]")),
+                ),
             )(i)?;
-            let (i, _) = ignore_inline_whitespace(line_ending)(i)?; // must be a new line after a field name []
-            let (i, mut value) = context("nested container", cut(kserd_nested(indents + 1)))(i)?;
-            value.id = identity;
+            // must be a new line after a field name []
+            let (i, _) = ignore_inline_whitespace(line_ending)(i)?;
+            let (i, mut value) = context("nested container", kserd_nested(indents + 1))(i)?;
+            value.id = value.id.or(identity); // prioritise ids that come as rows
 
             Ok((i, ContainerField::NestedVerbose(fname, value)))
         } else {
@@ -272,17 +303,19 @@ fn expect_indents<'a, E: ParseError<&'a str>>(
     }
 }
 
+/// Ignores all whitespace around name and identity. Field name _must_ exist, and if there is a
+/// separator (`:`) then the identity _must_ exist as well.
 fn verbose_field_name_and_identity<'a, E: ParseError<&'a str>>(
     i: &'a str,
 ) -> IResult<&'a str, (Kstr<'a>, Option<Kstr<'a>>), E> {
-    context("verbose container field name", |input| {
-        let (input, fname) = field_name(input)?;
-        let dot = input.chars().next().map(|c| c == '.').unwrap_or(false);
-        if dot {
-            let (input, id) = ident(false)(&input[1..])?;
-            Ok((input, (fname, Some(id))))
-        } else {
-            Ok((input, (fname, None)))
+    context("verbose container field name", |i| {
+        let (i, fname) = ignore_inline_whitespace(field_name)(i)?;
+        match ignore_inline_whitespace::<_, E, _>(char(':'))(i) {
+            Ok((i, _)) => {
+                let (i, id) = ignore_inline_whitespace(ident(false))(i)?;
+                Ok((i, (fname, Some(id))))
+            }
+            Err(_) => Ok((i, (fname, None))),
         }
     })(i)
 }

@@ -631,6 +631,64 @@ mod containers {
                 .unwrap()
         );
     }
+
+    #[test]
+    fn named_verbose_layouts_test() {
+        let s = include_str!("named-verbose.kserd");
+
+        let kserd = parse(s).unwrap();
+
+        assert_eq!(kserd.id(), Some("container-name"));
+
+        let map = kserd.cntr().unwrap();
+
+        assert_eq!(map.get("a").unwrap().id(), Some("A"));
+        assert_eq!(map.get("b").unwrap().id(), Some("B"));
+        assert_eq!(map.get("c").unwrap().id(), Some("C"));
+        assert_eq!(map.get("d").unwrap().id(), Some("D"));
+        assert_eq!(map.get("e").unwrap().id(), Some("E"));
+        assert_eq!(map.get("f").unwrap().id(), Some("F"));
+        assert_eq!(map.get("g").unwrap().id(), Some("G"));
+        assert_eq!(map.get("h").unwrap().id(), Some("H"));
+        assert_eq!(map.get("i").unwrap().id(), Some("I"));
+        assert_eq!(map.get("list").unwrap().id(), Some("list-name"));
+        assert_eq!(map.get("map").unwrap().id(), Some("map-name"));
+        assert_eq!(map.get("cntr").unwrap().id(), Some("cntr1-name"));
+        assert_eq!(map.get("cntr2").unwrap().id(), Some("cntr2name"));
+
+        let nest = map.get_cntr("cntr2").unwrap();
+        assert_eq!(nest.get("nest").unwrap().id(), Some("cntr-nested"));
+
+        let map2 = map.get_map("map").unwrap();
+        assert_eq!(map2.get(&Kserd::new_str("d")).unwrap().id(), Some("a-name"));
+    }
+
+    #[test]
+    fn verbose_maps_with_inline() {
+        let s = "[[map]]
+            <foo>   0   :    <bar>   1  
+
+        [[map]]
+    <foo>2:<bar>4";
+
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![(
+                "map",
+                Kserd::new_map(vec![
+                    (Kserd::new_num(0), Kserd::new_num(1)),
+                    (Kserd::new_num(2), Kserd::new_num(4))
+                ])
+            )])
+            .unwrap()
+        );
+
+        let kserd = parse(s).unwrap();
+        for (k, v) in kserd.cntr().unwrap().get_map("map").unwrap() {
+            assert_eq!(k.id(), Some("foo"));
+            assert_eq!(v.id(), Some("bar"));
+        }
+    }
 }
 
 mod seq {

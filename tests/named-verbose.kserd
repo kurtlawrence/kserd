@@ -1,0 +1,50 @@
+:container-name
+a = <A> ()
+b = <B> true
+c = <C> 101
+d = <D> "Hello"
+e = <E> b91''
+f = F (0, 1)
+g = G [1, 0]
+h = H {0:1, 1: 0}
+i = I ( aa = 1, bb = 2)
+
+[[  list  :   list-name]]
+1
+
+[[list   ]]
+2
+
+[[list]]
+3
+
+[[map]]
+"a": 3
+
+[[map]]
+"b": 2
+
+[[   map :map-name   ]]
+"c":
+    1
+
+[[map]]
+"d":
+	:a-name
+	a = 1
+
+[cntr : cntr1-name]
+    aaa = 101
+    bbb = 202
+
+[   cntr2 ]
+    :  cntr2name
+    aaa = 111
+    bbb = 222
+
+    [nest]
+		:cntr-nested
+		ccc = 333
+		ddd = 444
+
+		

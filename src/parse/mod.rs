@@ -106,6 +106,19 @@ fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<
     all_consuming(terminated(kserd_nested(0), multiline_whitespace))(i)
 }
 
+/// Turn a failure error back into a regular error.
+fn uncut<'a, E: ParseError<&'a str>, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, O, E>
+where
+    F: Fn(&'a str) -> IResult<&'a str, O, E>,
+{
+    move |i: &'a str| {
+        f(i).map_err(|e| match e {
+            Err::Failure(e) => Err::Error(e),
+            x => x,
+        })
+    }
+}
+
 /// Attemp to parse a string into a [`Kserd`] object.
 ///
 /// Requires the _parse_ feature.
