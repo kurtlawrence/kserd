@@ -130,7 +130,9 @@ mod tuples {
 
         do_test!("(<something> 123456789, 255)", &ans);
         do_test!("(    <something>  \t\t 123456789  \t,   255 \t\t )", &ans);
+        do_test!("A-Name (    <something>  \t\t 123456789  \t,   255 \t\t )", &ans);
     }
+
 
     #[test]
     fn test_tuple_concise() {
@@ -177,6 +179,12 @@ mod tuples {
 
 
 
+)"#;
+        do_test!(s, &ans);
+        let s = r#"  Some-Name    (
+<something> 123456789
+255
+<last> 100
 )"#;
         do_test!(s, &ans);
     }
