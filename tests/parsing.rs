@@ -631,6 +631,40 @@ mod containers {
                 .unwrap()
         );
     }
+
+    #[test]
+    fn named_verbose_layouts_test() {
+        let s = include_str!("named-verbose.kserd");
+
+        let kserd = parse(s).unwrap();
+    }
+
+    #[test]
+    fn verbose_maps_with_inline() {
+        let s = "[[map]]
+            <foo>   0   :    <bar>   1  
+
+        [[map]]
+    <foo>2:<bar>4";
+
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![(
+                "map",
+                Kserd::new_map(vec![
+                    (Kserd::new_num(0), Kserd::new_num(1)),
+                    (Kserd::new_num(2), Kserd::new_num(4))
+                ])
+            )])
+            .unwrap()
+        );
+
+        let kserd = parse(s).unwrap();
+        for (k, v) in kserd.cntr().unwrap().get_map("map").unwrap() {
+            assert_eq!(k.id(), Some("foo"));
+            assert_eq!(v.id(), Some("bar"));
+        }
+    }
 }
 
 mod seq {

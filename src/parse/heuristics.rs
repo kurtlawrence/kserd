@@ -69,29 +69,25 @@ pub fn pattern_match_verbose<'a, E: ParseError<&'a str>>(
     let (i, _) = multiline_whitespace(orig)?; // ignore _all_ whitespace before hand
 
     // generally a Verbose format can be recognised by:
+    // - An identity (:id)
     // - A direct mapping (var_name = xxx)
     // - A nested mapping ([var_name])
     // - A sequence or map entry ([[var_name]])
+    let encased = |s, e| {
+        preceded::<_, _, _, (), _, _>(
+            tag(s),
+            terminated(
+                ignore_inline_whitespace(valid_name),
+                ignore_inline_whitespace(tag(e)),
+            ),
+        )(i)
+        .is_ok()
+    };
 
-    let is = recognise_field_assign(i);
-    let is = is
-        || preceded::<_, _, _, (), _, _>(
-            char('['),
-            terminated(
-                ignore_inline_whitespace(valid_name),
-                ignore_inline_whitespace(char(']')),
-            ),
-        )(i)
-        .is_ok();
-    let is = is
-        || preceded::<_, _, _, (), _, _>(
-            tag("[["),
-            terminated(
-                ignore_inline_whitespace(valid_name),
-                ignore_inline_whitespace(tag("]]")),
-            ),
-        )(i)
-        .is_ok();
+    let is = i.starts_with(':');
+    let is = is || recognise_field_assign(i);
+    let is = is || encased("[", "]");
+    let is = is || encased("[[", "]]");
 
     Ok((orig, is))
 }

@@ -58,10 +58,7 @@ pub fn tuple<'a, E: ParseError<&'a str>>(
             "inline tuple"
         };
 
-        let (i, value) = context(
-            ctx,
-            cut(terminated(parser, ignore_inline_whitespace(char(')')))),
-        )(i)?;
+        let (i, value) = context(ctx, terminated(parser, ignore_inline_whitespace(char(')'))))(i)?;
 
         let value = Value::Tuple(value);
 
@@ -95,10 +92,7 @@ pub fn seq_delimited<'a, E: ParseError<&'a str>>(
             "inline sequence"
         };
 
-        let (i, value) = context(
-            ctx,
-            cut(terminated(parser, ignore_inline_whitespace(char(']')))),
-        )(i)?;
+        let (i, value) = context(ctx, terminated(parser, ignore_inline_whitespace(char(']'))))(i)?;
 
         let value = Value::Seq(value);
 

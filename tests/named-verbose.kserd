@@ -12,7 +12,7 @@ i = I ( aa = 1, bb = 2)
 [[  list  :   list-name]]
 1
 
-[[list]]
+[[list   ]]
 2
 
 [[list]]
@@ -24,7 +24,7 @@ i = I ( aa = 1, bb = 2)
 [[map]]
 "b": 2
 
-[[   map :map-name]]
+[[   map :map-name   ]]
 "c":
     1
 

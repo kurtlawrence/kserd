@@ -73,10 +73,7 @@ pub fn delimited<'a, E: ParseError<&'a str>>(
 
         let ctx = if concise { "concise map" } else { "inline map" };
 
-        let (i, value) = context(
-            ctx,
-            cut(terminated(parser, ignore_inline_whitespace(char('}')))),
-        )(i)?;
+        let (i, value) = context(ctx, terminated(parser, ignore_inline_whitespace(char('}'))))(i)?;
 
         let value = Value::Map(value.into_iter().collect());
 
