@@ -5,15 +5,15 @@ fn kvp_kserdstr_to_kserd<'a, E: ParseError<&'a str>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, (Kstr<'a>, Kserd<'a>), E> {
     context(
-        "kserdstr-kserd key-value pair",
+        "name-kserd key value pair",
         separated_pair(
             field_name,
             ignore_inline_whitespace(char('=')),
-            ignore_inline_whitespace(if force_inline {
+            ignore_inline_whitespace(cut(if force_inline {
                 kserd_inline
             } else {
                 kserd_concise
-            }),
+            })),
         ),
     )
 }
@@ -121,7 +121,7 @@ pub fn verbose<'a, E: ParseError<&'a str>>(
                     value,
                 } => {
                     let (x, seq) = seqs.entry(field_name).or_insert_with(|| (None, Vec::new()));
-                    *x = id.or(x.take());
+                    *x = id.or_else(|| x.take());
                     seq.push(value);
                 }
                 ContainerField::MapEntry {
@@ -133,7 +133,7 @@ pub fn verbose<'a, E: ParseError<&'a str>>(
                     let (x, map) = maps
                         .entry(field_name)
                         .or_insert_with(|| (None, BTreeMap::new()));
-                    *x = id.or(x.take());
+                    *x = id.or_else(|| x.take());
                     map.insert(key, value);
                 }
             }
@@ -181,7 +181,7 @@ enum ContainerField<'a> {
 fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
     indents: usize,
 ) -> impl Fn(&'a str) -> IResult<&'a str, ContainerField<'a>, E> {
-    context("verbose container field", move |i: &'a str| {
+    move |i: &'a str| {
         // This is little different. The indent is always from the newline
         // but there could be multiple newlines and whitespace before the _final_
         // new line. The only way to know is to look ahead...
@@ -232,7 +232,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
 
             // get the key (kserd-inline:)
             let (i, key) = opt(terminated(
-                ignore_inline_whitespace(kserd_inline),
+                ignore_inline_whitespace(uncut(kserd_inline)),
                 ignore_inline_whitespace(char(':')),
             ))(i)?;
 
@@ -240,11 +240,11 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                 let (i, value) = context(
                     "verbose map entry",
                     alt((
+                        ignore_inline_whitespace(kserd_concise),
                         preceded(
                             ignore_inline_whitespace(line_ending),
                             kserd_nested(indents + 1),
                         ),
-                        ignore_inline_whitespace(kserd_concise),
                     )),
                 )(i)?;
                 let entry = ContainerField::MapEntry {
@@ -265,7 +265,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                     },
                 ))
             }
-        } else if i.starts_with("[") {
+        } else if i.starts_with('[') {
             let (i, (fname, identity)) = preceded(
                 tag("["),
                 terminated(
@@ -285,7 +285,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
                 |i| Err(Err::Error(error::make_error(i, ErrorKind::NoneOf))),
             )(i)
         }
-    })
+    }
 }
 
 fn expect_indents<'a, E: ParseError<&'a str>>(

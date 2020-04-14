@@ -28,6 +28,11 @@ i = I ( aa = 1, bb = 2)
 "c":
     1
 
+[[map]]
+"d":
+	:a-name
+	a = 1
+
 [cntr : cntr1-name]
     aaa = 101
     bbb = 202
@@ -41,5 +46,5 @@ i = I ( aa = 1, bb = 2)
 		:cntr-nested
 		ccc = 333
 		ddd = 444
-	
+
 		

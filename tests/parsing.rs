@@ -658,6 +658,9 @@ mod containers {
 
         let nest = map.get_cntr("cntr2").unwrap();
         assert_eq!(nest.get("nest").unwrap().id(), Some("cntr-nested"));
+
+        let map2 = map.get_map("map").unwrap();
+        assert_eq!(map2.get(&Kserd::new_str("d")).unwrap().id(), Some("a-name"));
     }
 
     #[test]
