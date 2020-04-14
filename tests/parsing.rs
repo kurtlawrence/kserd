@@ -575,6 +575,19 @@ mod seq {
             ..Default::default()
         });
         do_test!(&s, &ans);
+
+        do_test!(
+            "Some-name[-5,-2,-1,0,1,2,5]",
+            &Kserd::new(Value::Seq(vec![
+                Kserd::new(Value::new_num(-5)),
+                Kserd::new(Value::new_num(-2)),
+                Kserd::new(Value::new_num(-1)),
+                Kserd::new(Value::new_num(0)),
+                Kserd::new(Value::new_num(1)),
+                Kserd::new(Value::new_num(2)),
+                Kserd::new(Value::new_num(5)),
+            ]))
+        );
     }
 
     #[test]
