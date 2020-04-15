@@ -92,7 +92,6 @@ fn kserd_nested<'a, E: ParseError<&'a str>>(
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
         let (i, verbose) = pattern_match_verbose(i)?;
-
         if verbose {
             // verbose can only be a Container type!
             cntr::verbose(indents)(i)
@@ -103,7 +102,13 @@ fn kserd_nested<'a, E: ParseError<&'a str>>(
 }
 
 fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
-    all_consuming(terminated(kserd_nested(0), multiline_whitespace))(i)
+    if i.is_empty() {
+        context("empty input", |i| {
+            Err(Err::Error(error::make_error(i, ErrorKind::Eof)))
+        })(i)
+    } else {
+        all_consuming(terminated(kserd_nested(0), multiline_whitespace))(i)
+    }
 }
 
 /// Turn a failure error back into a regular error.

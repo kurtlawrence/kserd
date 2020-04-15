@@ -213,16 +213,16 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
         if i.starts_with(':') {
             let (i, identity) = ignore_inline_whitespace(ident(false))(&i[1..])?;
             Ok((i, ContainerField::Id(identity)))
-        } else if recognise_field_assign(i) {
-            let (i, (fname, val)) = kvp_kserdstr_to_kserd(false)(i)?;
-            Ok((i, ContainerField::Direct(fname, val)))
         } else if i.starts_with("[[") {
-            let (i, (field_name, id)) = preceded(
-                tag("[["),
-                terminated(
-                    verbose_field_name_and_identity,
-                    ignore_inline_whitespace(tag("]]")),
-                ),
+            let (i, (field_name, id)) = context(
+                "field name. expecting 'field_name[:identity]'",
+                cut(preceded(
+                    tag("[["),
+                    terminated(
+                        verbose_field_name_and_identity,
+                        ignore_inline_whitespace(tag("]]")),
+                    ),
+                )),
             )(i)?;
             // must be a new line after a field name [[]]
             let (i, _) = ignore_inline_whitespace(line_ending)(i)?;
@@ -280,10 +280,10 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
 
             Ok((i, ContainerField::NestedVerbose(fname, value)))
         } else {
-            context(
-                "unmatchable container field. not a direct (=), seq, or map entry",
-                |i| Err(Err::Error(error::make_error(i, ErrorKind::NoneOf))),
-            )(i)
+            // not an id or list/map/cntr entry, AND it has something
+            // (already check for empty line)
+            let (i, (fname, val)) = cut(kvp_kserdstr_to_kserd(false))(i)?;
+            Ok((i, ContainerField::Direct(fname, val)))
         }
     }
 }

@@ -115,11 +115,16 @@ fn string<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, 
     )(i)
 }
 
+#[inline(always)]
+pub fn barr_tag<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+    tag("b91'")(i)
+}
+
 fn barr<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E> {
     context(
         "base 91 byte array",
         preceded(
-            tag("b91'"),
+            barr_tag,
             cut(terminated(
                 map(take_till(|c| c == '\''), |bytes: &str| {
                     Barr::owned(base91::slice_decode(bytes.as_bytes()))

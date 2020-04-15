@@ -85,9 +85,9 @@ pub fn pattern_match_verbose<'a, E: ParseError<&'a str>>(
     };
 
     let is = i.starts_with(':');
+    let is = is || i.starts_with("[[");
     let is = is || recognise_field_assign(i);
     let is = is || encased("[", "]");
-    let is = is || encased("[[", "]]");
 
     Ok((orig, is))
 }
@@ -105,7 +105,11 @@ pub fn recognise_concise(i: &str) -> bool {
 
 /// Recognises the sequence: `field_name =`.
 pub fn recognise_field_assign(i: &str) -> bool {
-    preceded::<_, _, _, (), _, _>(field_name, terminated(inline_whitespace, char('=')))(i).is_ok()
+    // maybe_names is a litle more relaxed than field_name so it can recognise but still fail
+    let not = "<>(){}='\"\r\n";
+    let maybe_names =
+        take_while::<_, _, ()>(move |c: char| c.is_ascii_alphanumeric() || !not.contains(c));
+    terminated(maybe_names, char('='))(i).is_ok()
 }
 
 #[cfg(test)]
