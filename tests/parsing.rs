@@ -9,8 +9,6 @@ use std::collections::BTreeMap;
 
 macro_rules! do_test {
     ($s:expr, $ans:expr) => {{
-        // use nom::error::convert_error;
-
         let s: &str = $s;
         let ans: &Kserd = $ans;
 
@@ -19,11 +17,7 @@ macro_rules! do_test {
         match r {
             Err(e) => {
                 println!("************** KSERD VALUE  **************\n{}", s);
-                println!(
-                    "************** ERROR OUTPUT **************\n{:?}",
-                    // convert_error(s, e) TODO raise bug report on this.
-                    e
-                );
+                println!("************** ERROR OUTPUT **************\n{:?}", e);
                 panic!("errored");
             }
             Ok(res) => {
@@ -604,22 +598,6 @@ mod containers {
     }
 
     #[test]
-    fn test_cntr_verbose06() {
-        let s = "a = 101
-        
-        b = 202
-        c
-        d = 404";
-        let err = parse(s).unwrap_err().backtrace();
-        assert_eq!(
-            err,
-            "#0: at 4:9 :: in Eof
-        c
-        ^"
-        );
-    }
-
-    #[test]
     fn test_cntr_verbose07() {
         // notice the indent
         let s = "a = 101
@@ -892,5 +870,97 @@ mod map {
             ..Default::default()
         });
         do_test!(&s, &ans);
+    }
+}
+
+mod err {
+    use super::*;
+    macro_rules! check_backtrace {
+        ($s:expr, $ans:expr) => {{
+            let s: &str = $s;
+            let ans: &str = $ans;
+
+            let r = parse(s);
+
+            match r {
+                Err(e) => {
+                    let trace = e.backtrace();
+                    println!("************** BACKTRACE *****************\n{}", trace);
+                    assert_eq!(&trace, ans);
+                }
+                Ok(res) => {
+                    println!("************** KSERD VALUE ***************\n{}", s);
+                    println!(
+                        "************** KSERD OUT *****************\n{}",
+                        res.as_str()
+                    );
+                    panic!("should have failed parsing");
+                }
+            }
+        }};
+    }
+
+    #[test]
+    fn malformed_field_name() {
+        let s = "field name = [0, 1]";
+        let ans = "#0: at 1:7 :: expected '=', found 'n'
+field name = [0, 1]
+      ^
+
+#1: at 1:1 :: in name-kserd key value pair
+field name = [0, 1]
+^";
+        check_backtrace!(s, ans);
+
+        let s = "field!name = <str> [0,1]";
+        let ans = "#0: at 1:6 :: expected '=', found '!'
+field!name = <str> [0,1]
+     ^
+
+#1: at 1:1 :: in name-kserd key value pair
+field!name = <str> [0,1]
+^";
+        check_backtrace!(s, ans);
+
+        let s = "field-name = [0, 1]
+what the = 101";
+        let ans = "#0: at 2:6 :: expected '=', found 't'
+what the = 101
+     ^
+
+#1: at 2:1 :: in name-kserd key value pair
+what the = 101
+^";
+        check_backtrace!(s, ans);
+    }
+
+    #[test]
+    fn invalid_list_map_verbose_name() {
+        let s = "[[field name]]";
+        let ans = "#0: at 1:9 :: in Tag
+[[field name]]
+        ^
+
+#1: at 1:1 :: in field name. expecting 'field_name[:identity]'
+[[field name]]
+^";
+        check_backtrace!(s, ans);
+    }
+
+    #[test]
+    fn field_missing_equals() {
+        let s = "a = 101
+
+        b = 202
+        c
+        d = 404";
+        let ans = "#0: at 4:10 :: expected '=', reached end of line or end of file first
+        c
+         ^
+
+#1: at 4:9 :: in name-kserd key value pair
+        c
+        ^";
+        check_backtrace!(s, ans);
     }
 }
