@@ -1,6 +1,4 @@
-use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
-use std::convert::TryInto;
-use std::fmt;
+use std::{cmp::*, convert::TryInto, fmt, str::FromStr};
 use Number::*;
 
 /// A numerical value.
@@ -203,6 +201,22 @@ impl fmt::Display for Number {
     }
 }
 
+impl FromStr for Number {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, String> {
+        let no_underscroll = s.replace("_", "");
+        if let Ok(x) = no_underscroll.parse::<u128>() {
+            Ok(Uint(x))
+        } else if let Ok(x) = no_underscroll.parse::<i128>() {
+            Ok(Int(x))
+        } else if let Ok(x) = s.parse::<f64>() {
+            Ok(Float(x))
+        } else {
+            Err(format!("'{}' could not be parsed into a number", s))
+        }
+    }
+}
+
 impl PartialEq for Number {
     fn eq(&self, other: &Number) -> bool {
         match (self, other) {
@@ -224,6 +238,8 @@ impl PartialEq for Number {
     }
 }
 
+impl Eq for Number {}
+
 macro_rules! partial_eq_impl {
     ( $( $t:ty ),* ) => {
 	$(
@@ -238,27 +254,11 @@ macro_rules! partial_eq_impl {
 
 partial_eq_impl!(usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64);
 
-impl Eq for Number {}
-
 impl PartialOrd for Number {
     fn partial_cmp(&self, other: &Number) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
-
-macro_rules! partial_ord_impl {
-    ( $( $t:ty ),* ) => {
-	$(
-	impl PartialOrd<$t> for Number {
-	    fn partial_cmp(&self, rhs: &$t) -> Option<Ordering> {
-		Some(self.cmp(&Number::from(*rhs)))
-	    }
-	}
-	)*
-    };
-}
-
-partial_ord_impl!(usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64);
 
 impl Ord for Number {
     fn cmp(&self, other: &Number) -> Ordering {
@@ -280,6 +280,20 @@ impl Ord for Number {
         }
     }
 }
+
+macro_rules! partial_ord_impl {
+    ( $( $t:ty ),* ) => {
+	$(
+	impl PartialOrd<$t> for Number {
+	    fn partial_cmp(&self, rhs: &$t) -> Option<Ordering> {
+		Some(self.cmp(&Number::from(*rhs)))
+	    }
+	}
+	)*
+    };
+}
+
+partial_ord_impl!(usize, u8, u16, u32, u64, u128, isize, i8, i16, i32, i64, i128, f32, f64);
 
 /// `[ -INF | ... | C0 | ... | +INF | CNaN ]`
 fn cmp_float_to_float(lhs: f64, rhs: f64) -> Ordering {
@@ -609,5 +623,19 @@ mod tests {
         assert_eq!(rev_ordering(Less), Greater);
         assert_eq!(rev_ordering(Greater), Less);
         assert_eq!(rev_ordering(Equal), Equal);
+    }
+
+    #[test]
+    fn from_str_testing() {
+        let err = |s| Err(format!("'{}' could not be parsed into a number", s));
+        assert_eq!(Number::from_str("100"), Ok(Uint(100)));
+        assert_eq!(Number::from_str("-100"), Ok(Int(-100)));
+        assert_eq!(Number::from_str("3.14"), Ok(Float(3.14)));
+        assert_eq!(Number::from_str("abcd"), err("abcd"));
+
+        assert_eq!(Number::from_str("100_000"), Ok(Uint(100_000)));
+        assert_eq!(Number::from_str("-100_000"), Ok(Int(-100_000)));
+        assert_eq!(Number::from_str("-3.14e7"), Ok(Float(-3.14e7)));
+        assert_eq!(Number::from_str(" 10.  0"), err(" 10.  0"));
     }
 }
