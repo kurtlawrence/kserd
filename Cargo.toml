@@ -23,5 +23,10 @@ format =    [ "base91" ]
 parse =     [ "base91", "nom" ]
 
 [dev-dependencies]
-serde_derive = "1"
-rand = "0.7"
+serde_derive = "*"
+rand = "*"
+criterion = "*"
+
+[[bench]]
+name = "num"
+harness = false

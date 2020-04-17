@@ -1,4 +1,4 @@
-use std::{cmp::*, convert::TryInto, fmt, str::FromStr};
+use std::{cmp::*, convert::TryInto, error, fmt, str::FromStr};
 use Number::*;
 
 /// A numerical value.
@@ -202,18 +202,51 @@ impl fmt::Display for Number {
 }
 
 impl FromStr for Number {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, String> {
-        let no_underscroll = s.replace("_", "");
-        if let Ok(x) = no_underscroll.parse::<u128>() {
-            Ok(Uint(x))
-        } else if let Ok(x) = no_underscroll.parse::<i128>() {
-            Ok(Int(x))
-        } else if let Ok(x) = s.parse::<f64>() {
-            Ok(Float(x))
-        } else {
-            Err(format!("'{}' could not be parsed into a number", s))
+    type Err = IntoNumberErr;
+    fn from_str(s: &str) -> Result<Self, IntoNumberErr> {
+        if s.is_empty() {
+            return Err(IntoNumberErr);
         }
+        let neg = s.starts_with('-');
+        let int = parse_uint(if neg { &s[1..] } else { s });
+        match int {
+            Ok(x) if neg => match x.cmp(&170_141_183_460_469_231_731_687_303_715_884_105_728) {
+                Ordering::Greater => Err(IntoNumberErr),
+                Ordering::Equal => Ok(Int(std::i128::MIN)),
+                Ordering::Less => Ok(Int(-(x as i128))),
+            },
+            Ok(x) => Ok(Uint(x)),
+            Err(_) => s.parse::<f64>().map(Float).map_err(|_| IntoNumberErr),
+        }
+    }
+}
+
+fn parse_uint(s: &str) -> Result<u128, IntoNumberErr> {
+    let mut n: u128 = 0;
+    for ch in s.chars() {
+        if ch == '_' {
+            continue;
+        }
+        let i = ch.to_digit(10).ok_or(IntoNumberErr)? as u128;
+        n = n * 10 + i;
+    }
+    Ok(n)
+}
+
+#[derive(PartialEq)]
+pub struct IntoNumberErr;
+
+impl error::Error for IntoNumberErr {}
+
+impl fmt::Debug for IntoNumberErr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "could not parse input string as a number")
+    }
+}
+
+impl fmt::Display for IntoNumberErr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        <Self as fmt::Debug>::fmt(self, f)
     }
 }
 
@@ -627,15 +660,47 @@ mod tests {
 
     #[test]
     fn from_str_testing() {
-        let err = |s| Err(format!("'{}' could not be parsed into a number", s));
         assert_eq!(Number::from_str("100"), Ok(Uint(100)));
         assert_eq!(Number::from_str("-100"), Ok(Int(-100)));
         assert_eq!(Number::from_str("3.14"), Ok(Float(3.14)));
-        assert_eq!(Number::from_str("abcd"), err("abcd"));
+        assert_eq!(Number::from_str("abcd"), Err(IntoNumberErr));
 
         assert_eq!(Number::from_str("100_000"), Ok(Uint(100_000)));
         assert_eq!(Number::from_str("-100_000"), Ok(Int(-100_000)));
         assert_eq!(Number::from_str("-3.14e7"), Ok(Float(-3.14e7)));
-        assert_eq!(Number::from_str(" 10.  0"), err(" 10.  0"));
+        assert_eq!(Number::from_str(" 10.  0"), Err(IntoNumberErr));
+
+        let err = Number::from_str("").unwrap_err();
+        assert_eq!(
+            &format!("{}", err),
+            "could not parse input string as a number"
+        );
+
+        // check bounds
+        macro_rules! check {
+            ( $( $n:expr ),+ ) => {{
+                $(
+                    let n = $n; // eval expr (so rand is eval once!)
+                    dbg!(n);
+                    let s: String = n.to_string();
+                    dbg!(&s);
+                    let n = Number::from(n);
+                    assert_eq!(Number::from_str(&s), Ok(n));
+                )+
+            }};
+        }
+        check!(
+            std::u128::MIN,
+            std::u128::MAX,
+            std::i128::MAX,
+            std::i128::MIN
+        );
+
+        use rand::*;
+        let mut rng = thread_rng();
+        for _ in 0..500_000 {
+            // test random numbers to fuzz test the parsing
+            check!(rng.gen::<u128>(), rng.gen::<i128>(), rng.gen::<f64>());
+        }
     }
 }
