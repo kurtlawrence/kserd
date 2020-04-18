@@ -1,4 +1,10 @@
-use std::{cmp::*, convert::TryInto, error, fmt, str::FromStr};
+use std::{
+    cmp::*,
+    convert::TryInto,
+    error, fmt,
+    hash::{Hash, Hasher},
+    str::FromStr,
+};
 use Number::*;
 
 /// A numerical value.
@@ -218,6 +224,12 @@ impl FromStr for Number {
             Ok(x) => Ok(Uint(x)),
             Err(_) => s.parse::<f64>().map(Float).map_err(|_| IntoNumberErr),
         }
+    }
+}
+
+impl Hash for Number {
+    fn hash<H: Hasher>(&self, hasher: &mut H) {
+        self.as_f64().to_bits().hash(hasher)
     }
 }
 
@@ -702,5 +714,14 @@ mod tests {
             // test random numbers to fuzz test the parsing
             check!(rng.gen::<u128>(), rng.gen::<i128>(), rng.gen::<f64>());
         }
+    }
+
+    #[test]
+    fn hash_testing() {
+        let mut set = std::collections::HashSet::<Number>::new();
+        set.insert(101.into());
+        assert_eq!(set.contains(&101.0.into()), true);
+        set.insert(3.14.into());
+        assert_eq!(set.insert(101i8.into()), false); // contains!
     }
 }
