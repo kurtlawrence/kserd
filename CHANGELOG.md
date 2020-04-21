@@ -1,5 +1,5 @@
 
-# Updates
+# 0.4.0
 - Add `Borrow` trait to `Kstr`
 - Added the container `Accessor` API
 - Fix parsing of named tuples
