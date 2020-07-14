@@ -1,6 +1,6 @@
 [package]
 name = "kserd"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
 edition = "2018"
 description = "Kurt's Self-Explanatory Rust Data"
@@ -13,8 +13,8 @@ license = "MIT"
 
 [dependencies]
 base91 =    { version = "0.0.1",    optional = true,	default-features = false }
-nom =	    { version = "5.0",	    optional = true,	default-features = false,   features = [ "std", "lexical" ] }
-serde =	    { version = "1.0",	    optional = true, 	default-features = false,   features = [ "std" ] }
+nom =	    { version = "5",	    optional = true,	default-features = false,   features = [ "std", "lexical" ] }
+serde =	    { version = "1",	    optional = true, 	default-features = false,   features = [ "std" ] }
 
 [features]
 default =   [ "encode", "format", "parse", ]
