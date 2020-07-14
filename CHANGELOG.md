@@ -9,6 +9,10 @@
 - Implement `FromStr` for `Number`
 - Implement `Hash` for `Number`
 
+## 0.4.1
+- Increase MSRV to 1.44.1
+- Update dependencies
+
 # 0.3.0
 - Rename `ParseErr` to `Error`
 - Rename internal items to make clippy happy
