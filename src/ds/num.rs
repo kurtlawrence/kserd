@@ -215,18 +215,25 @@ impl FromStr for Number {
             return Err(IntoNumberErr);
         }
 
-            let fmt = ::lexical_core::NumberFormat::OCAML_STRING;
-            let bytes = s.as_bytes();
-            let neg = bytes[0] == b'-';
-            let valid_int = bytes.iter().skip(if neg { 1 } else { 0 }).all(|b| b.is_ascii_digit() || *b == b'_');
-            
-            if !valid_int {
-                s.parse::<f64>().map(Float).map_err(|_| IntoNumberErr)
-            } else if neg {
-                parse_format::<i128>(bytes, fmt).map(Int).map_err(|_| IntoNumberErr)
-            } else {
-                parse_format::<u128>(bytes, fmt).map(Uint).map_err(|_| IntoNumberErr)
-            }
+        let fmt = ::lexical_core::NumberFormat::OCAML_STRING;
+        let bytes = s.as_bytes();
+        let neg = bytes[0] == b'-';
+        let valid_int = bytes
+            .iter()
+            .skip(if neg { 1 } else { 0 })
+            .all(|b| b.is_ascii_digit() || *b == b'_');
+
+        if !valid_int {
+            s.parse::<f64>().map(Float).map_err(|_| IntoNumberErr)
+        } else if neg {
+            parse_format::<i128>(bytes, fmt)
+                .map(Int)
+                .map_err(|_| IntoNumberErr)
+        } else {
+            parse_format::<u128>(bytes, fmt)
+                .map(Uint)
+                .map_err(|_| IntoNumberErr)
+        }
     }
 }
 
