@@ -249,10 +249,7 @@ impl<'a> Value<'a> {
     /// assert_eq!(value.unit(), true);
     /// ```
     pub fn unit(&self) -> bool {
-        match &self {
-            Value::Unit => true,
-            _ => false,
-        }
+        matches!(&self, Value::Unit)
     }
 
     /// `Value` is a boolean value.

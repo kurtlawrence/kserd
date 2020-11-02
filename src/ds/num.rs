@@ -210,19 +210,29 @@ impl fmt::Display for Number {
 impl FromStr for Number {
     type Err = IntoNumberErr;
     fn from_str(s: &str) -> Result<Self, IntoNumberErr> {
+        use ::lexical_core::parse_format;
         if s.is_empty() {
             return Err(IntoNumberErr);
         }
-        let neg = s.starts_with('-');
-        let int = parse_uint(if neg { &s[1..] } else { s });
-        match int {
-            Ok(x) if neg => match x.cmp(&170_141_183_460_469_231_731_687_303_715_884_105_728) {
-                Ordering::Greater => Err(IntoNumberErr),
-                Ordering::Equal => Ok(Int(std::i128::MIN)),
-                Ordering::Less => Ok(Int(-(x as i128))),
-            },
-            Ok(x) => Ok(Uint(x)),
-            Err(_) => s.parse::<f64>().map(Float).map_err(|_| IntoNumberErr),
+
+        let fmt = ::lexical_core::NumberFormat::OCAML_STRING;
+        let bytes = s.as_bytes();
+        let neg = bytes[0] == b'-';
+        let valid_int = bytes
+            .iter()
+            .skip(if neg { 1 } else { 0 })
+            .all(|b| b.is_ascii_digit() || *b == b'_');
+
+        if !valid_int {
+            s.parse::<f64>().map(Float).map_err(|_| IntoNumberErr)
+        } else if neg {
+            parse_format::<i128>(bytes, fmt)
+                .map(Int)
+                .map_err(|_| IntoNumberErr)
+        } else {
+            parse_format::<u128>(bytes, fmt)
+                .map(Uint)
+                .map_err(|_| IntoNumberErr)
         }
     }
 }
@@ -231,18 +241,6 @@ impl Hash for Number {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
         self.as_f64().to_bits().hash(hasher)
     }
-}
-
-fn parse_uint(s: &str) -> Result<u128, IntoNumberErr> {
-    let mut n: u128 = 0;
-    for ch in s.chars() {
-        if ch == '_' {
-            continue;
-        }
-        let i = ch.to_digit(10).ok_or(IntoNumberErr)? as u128;
-        n = n * 10 + i;
-    }
-    Ok(n)
 }
 
 #[derive(PartialEq)]
