@@ -13,7 +13,7 @@ license = "MIT"
 
 [dependencies]
 base91 =       { version = "0.0.1", optional = true,	default-features = false }
-lexical-core = { version = "0.7",   optional = false,	default-features = false,   features = [ "format" ] }
+lexical-core = { version = "0.7",   optional = false,	default-features = false,   features = [ "std", "format" ] }
 nom =	       { version = "5",	    optional = true,	default-features = false,   features = [ "std", "lexical" ] }
 serde =	       { version = "1",	    optional = true, 	default-features = false,   features = [ "std" ] }
 

@@ -1,4 +1,7 @@
 
+# Changes
+- Increase `Number` `FromStr` performance.
+
 # 0.4.0
 - Add `Borrow` trait to `Kstr`
 - Added the container `Accessor` API
