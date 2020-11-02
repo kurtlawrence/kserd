@@ -1,7 +1,4 @@
 
-# Changes
-- Increase `Number` `FromStr` performance.
-
 # 0.4.0
 - Add `Borrow` trait to `Kstr`
 - Added the container `Accessor` API
@@ -15,6 +12,9 @@
 ## 0.4.1
 - Increase MSRV to 1.44.1
 - Update dependencies
+
+## 0.4.2
+- Increase `Number` `FromStr` performance.
 
 # 0.3.0
 - Rename `ParseErr` to `Error`
