@@ -100,7 +100,7 @@ pub(super) fn write(
 
                         // write value
                         buf = write_node(buf, v, fmts, val_indent);
-                        buf.push_str("\n");
+                        buf.push('\n');
                     }
                     _ => {
                         buf = write_key_and_value_concise(buf, k, v, col);

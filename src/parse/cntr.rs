@@ -210,8 +210,8 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
         }
 
         // can use starts_with as all whitespace should be removed.
-        if i.starts_with(':') {
-            let (i, identity) = ignore_inline_whitespace(ident(false))(&i[1..])?;
+        if let Some(rem) = i.strip_prefix(':') {
+            let (i, identity) = ignore_inline_whitespace(ident(false))(rem)?;
             Ok((i, ContainerField::Id(identity)))
         } else if i.starts_with("[[") {
             let (i, (field_name, id)) = context(
