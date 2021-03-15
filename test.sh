@@ -1,8 +1,4 @@
 set -e
-# Update docs
-cargo modoc
-cargo +stable fmt
-
 # Check formatting
 cargo +stable fmt -- --check
 
