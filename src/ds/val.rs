@@ -210,8 +210,7 @@ impl<'a> Value<'a> {
         S: Into<Kstr<'a>>,
         I: IntoIterator<Item = (S, Kserd<'a>)>,
     {
-        use std::iter::FromIterator;
-        let map = BTreeMap::from_iter(iter.into_iter().map(|(k, v)| (k.into(), v)));
+        let map: BTreeMap<_, _> = iter.into_iter().map(|(k, v)| (k.into(), v)).collect();
         for (k, _) in map.iter() {
             InvalidFieldName::validate(k)?;
         }
