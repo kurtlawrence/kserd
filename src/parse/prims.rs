@@ -51,17 +51,15 @@ fn num<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Number, E> {
 
 /// Takes what could be string contents until a string terminator is reached.
 /// The terminator is one of [`"`, `'`, `\t`, `\r`, `\n`].
-fn take_str_until_terminated<'a, E: ParseError<&'a str>>(
-    i: &'a str,
-) -> IResult<&'a str, &'a str, E> {
+fn take_str_until_terminated(i: &str) -> (&str, &str) {
     let mut preceded_by_backslash = false;
 
     for (idx, ch) in i.char_indices() {
         if "\t\r\n".contains(ch) {
-            return Ok((&i[idx..], &i[..idx]));
+            return (&i[idx..], &i[..idx]);
         }
         if !preceded_by_backslash && ch == '\"' {
-            return Ok((&i[idx..], &i[..idx]));
+            return (&i[idx..], &i[..idx]);
         }
 
         preceded_by_backslash = ch == '\\';
@@ -69,7 +67,7 @@ fn take_str_until_terminated<'a, E: ParseError<&'a str>>(
 
     let to = i.len();
 
-    Ok((&i[to..], &i[..to]))
+    (&i[to..], &i[..to])
 }
 
 const ESC_QUOTE: &str = r#"\'"#;
@@ -88,8 +86,8 @@ fn str_contains_escaped(i: &str) -> bool {
         || i.contains(ESC_LF)
 }
 
-fn parse_str<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
-    let (i, string) = take_str_until_terminated(i)?;
+fn parse_str(i: &str) -> (&str, Kstr<'_>) {
+    let (i, string) = take_str_until_terminated(i);
 
     let kstr = if str_contains_escaped(string) {
         let string = string
@@ -105,13 +103,16 @@ fn parse_str<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a
         Kstr::brwed(string)
     };
 
-    Ok((i, kstr))
+    (i, kstr)
 }
 
 fn string<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
     context(
         "string",
-        preceded(char('\"'), cut(terminated(parse_str, char('\"')))),
+        preceded(
+            char('\"'),
+            cut(terminated(|i| Ok(parse_str(i)), char('\"'))),
+        ),
     )(i)
 }
 
@@ -173,37 +174,33 @@ mod tests {
     #[test]
     fn test_string() {
         macro_rules! test_parse_str {
-		( $($str:literal),* ) => {
-			$(
-				let var: &str = $str;
-				let s = format!("{}", var);
-				let r = parse_str::<VerboseError<_>>(&s);
-				assert_eq!(r, Ok(("", Kstr::brwed(var))));
-			)*
-		};
+	    ( $($str:literal),* ) => {
+		$(
+		    let var: &str = $str;
+		    let s = format!("{}", var);
+		    let r = parse_str(&s);
+		    assert_eq!(r, ("", Kstr::brwed(var)));
+		)*
+	    };
 	}
 
-        let r = parse_str::<VerboseError<_>>(" \"");
-        assert_eq!(r, Ok(("\"", Kstr::brwed(" "))));
-        let r = parse_str::<VerboseError<_>>(" \t");
-        assert_eq!(r, Ok(("\t", Kstr::brwed(" "))));
-        let r = parse_str::<VerboseError<_>>(" \r");
-        assert_eq!(r, Ok(("\r", Kstr::brwed(" "))));
-        let r = parse_str::<VerboseError<_>>(" \n");
-        assert_eq!(r, Ok(("\n", Kstr::brwed(" "))));
+        assert_eq!(parse_str(" \""), ("\"", Kstr::brwed(" ")));
+        assert_eq!(parse_str(" \t"), ("\t", Kstr::brwed(" ")));
+        assert_eq!(parse_str(" \r"), ("\r", Kstr::brwed(" ")));
+        assert_eq!(parse_str(" \n"), ("\n", Kstr::brwed(" ")));
 
         test_parse_str!("", "abcd");
 
         macro_rules! test_str {
-		( $($str:literal),* ) => {
-			$(
-				let var: &str = $str;
-				let s = format!("{:?}", var);
-				println!("{}", s);
-				let r = string::<VerboseError<_>>(&s);
-				assert_eq!(r, Ok(("", Kstr::brwed(var))));
-			)*
-		};
+	    ( $($str:literal),* ) => {
+		$(
+		    let var: &str = $str;
+		    let s = format!("{:?}", var);
+		    println!("{}", s);
+		    let r = string::<VerboseError<_>>(&s);
+		    assert_eq!(r, Ok(("", Kstr::brwed(var))));
+		)*
+	    };
 	}
 
         test_str!(

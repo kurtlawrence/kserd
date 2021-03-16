@@ -107,6 +107,13 @@ pub enum Number {
 #[derive(Debug, PartialEq)]
 pub struct IntoIntError;
 
+impl fmt::Display for IntoIntError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "original number is outside integers range")
+    }
+}
+impl error::Error for IntoIntError {}
+
 impl Number {
     /// Represent `Number` as an unsigned integer.
     ///
@@ -133,11 +140,14 @@ impl Number {
             Uint(x) => Ok(*x),
             Int(x) => (*x).try_into().map_err(|_| IntoIntError),
             Float(x) => {
-                if x.is_finite() && x.fract() < 1e-10 {
-                    Ok(*x as u128)
-                } else {
-                    Err(IntoIntError)
+                if x.is_finite() && x >= &0.0 {
+                    let r = x.round();
+                    let y = (r - x).abs();
+                    if y < 1e-10 {
+                        return Ok(r as u128);
+                    }
                 }
+                Err(IntoIntError)
             }
         }
     }
@@ -166,11 +176,14 @@ impl Number {
             Uint(x) => (*x).try_into().map_err(|_| IntoIntError),
             Int(x) => Ok(*x),
             Float(x) => {
-                if x.is_finite() && x.fract() < 1e-10 {
-                    Ok(*x as i128)
-                } else {
-                    Err(IntoIntError)
+                if x.is_finite() {
+                    let r = x.round();
+                    let y = (r - x).abs();
+                    if y < 1e-10 {
+                        return Ok(r as i128);
+                    }
                 }
+                Err(IntoIntError)
             }
         }
     }
@@ -591,12 +604,34 @@ mod tests {
         assert_eq!(Number::from(100.0).as_u128(), Ok(100));
         // can also work if fractional part of float is smaller than valid amount
         assert_eq!(Number::from(3.0 + 5e-11).as_u128(), Ok(3));
+        assert_eq!(Number::from(3.0 - 5e-11).as_u128(), Ok(3));
+        assert_eq!(Number::from(0.0).as_u128(), Ok(0));
         // can fail if outside
+        assert_eq!(Number::from(-1.0).as_u128(), Err(IntoIntError));
         assert_eq!(Number::from(-100i32).as_u128(), Err(IntoIntError));
         assert_eq!(Number::from(0.5).as_u128(), Err(IntoIntError));
         assert_eq!(Number::from(INFINITY).as_u128(), Err(IntoIntError));
         assert_eq!(Number::from(NEG_INFINITY).as_u128(), Err(IntoIntError));
         assert_eq!(Number::from(NAN).as_u128(), Err(IntoIntError));
+    }
+
+    #[test]
+    fn as_i128_test() {
+        use std::f64::{INFINITY, NAN, NEG_INFINITY};
+
+        // generally the conversion will work
+        assert_eq!(Number::from(100i32).as_i128(), Ok(100));
+        assert_eq!(Number::from(100.0).as_i128(), Ok(100));
+        // can also work if fractional part of float is smaller than valid amount
+        assert_eq!(Number::from(-3.0 + 5e-11).as_i128(), Ok(-3));
+        assert_eq!(Number::from(-3.0 - 5e-11).as_i128(), Ok(-3));
+        assert_eq!(Number::from(0.0).as_i128(), Ok(0));
+        assert_eq!(Number::from(-1.0).as_i128(), Ok(-1));
+        // can fail if outside
+        assert_eq!(Number::from(0.5).as_i128(), Err(IntoIntError));
+        assert_eq!(Number::from(INFINITY).as_i128(), Err(IntoIntError));
+        assert_eq!(Number::from(NEG_INFINITY).as_i128(), Err(IntoIntError));
+        assert_eq!(Number::from(NAN).as_i128(), Err(IntoIntError));
     }
 
     #[test]
@@ -708,7 +743,7 @@ mod tests {
 
         use rand::*;
         let mut rng = thread_rng();
-        for _ in 0..500_000 {
+        for _ in 0..200_000 {
             // test random numbers to fuzz test the parsing
             check!(rng.gen::<u128>(), rng.gen::<i128>(), rng.gen::<f64>());
         }
@@ -721,5 +756,23 @@ mod tests {
         assert_eq!(set.contains(&101.0.into()), true);
         set.insert(3.14.into());
         assert_eq!(set.insert(101i8.into()), false); // contains!
+    }
+
+    #[test]
+    fn as_integer_fuzz_testing() {
+        use rand::*;
+
+        let mut rng = thread_rng();
+
+        for _ in 0..200_000 {
+            let n: f64 = rng.gen::<f64>().trunc();
+            let nn = Number::from(n);
+            if let Ok(un) = nn.as_u128() {
+                assert_eq!(Number::from(un), nn);
+            }
+            if let Ok(sn) = nn.as_i128() {
+                assert_eq!(Number::from(sn), nn);
+            }
+        }
     }
 }

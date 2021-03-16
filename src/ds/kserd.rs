@@ -101,8 +101,6 @@ impl Kserd<'static> {
     /// let kserd = Kserd::new_num(3.14);
     /// assert_eq!(kserd.float(), Some(3.14));
     /// ```
-    ///
-    /// [`NumberType`]: crate::ds::num::NumberType
     pub fn new_num<T: NumberType>(value: T) -> Self {
         Kserd::with_id_unchk(value.identity(), Value::new_num(value))
     }
