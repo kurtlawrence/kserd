@@ -24,22 +24,8 @@ fn boolean<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, bool, E> 
     )(i)
 }
 
-fn uint<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, u128, E> {
-    context("unsigned integer", map_parser(digit1, from_str))(i)
-}
-
-fn int<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, i128, E> {
-    context(
-        "signed integer",
-        map_parser(
-            take_while(|c: char| c == '-' || c.is_ascii_digit()),
-            from_str,
-        ),
-    )(i)
-}
-
 fn num<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Number, E> {
-    const ALLOW: &str = "-.e";
+    const ALLOW: &str = "-.einfNa";
     context(
         "number",
         map_parser(
@@ -314,5 +300,8 @@ mod tests {
         u(LN_10);
         u(PI);
         u(TAU);
+        u(std::f64::INFINITY);
+        u(std::f64::NEG_INFINITY);
+        // u(std::f64::NAN); can't check NaN != Nan!
     }
 }

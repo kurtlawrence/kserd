@@ -14,12 +14,11 @@ use names::*;
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_till, take_while, take_while1},
-    character::complete::{alpha1, char, digit1, line_ending},
+    character::complete::{alpha1, char, line_ending},
     combinator::{all_consuming, cut, map, map_parser, opt},
     error::VerboseErrorKind,
     error::{self, context, ErrorKind, ParseError},
     multi::{many0, separated_list},
-    number::complete::double,
     sequence::{preceded, separated_pair, terminated},
     Err, IResult,
 };
