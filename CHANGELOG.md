@@ -3,6 +3,8 @@
 - Increase MSRV to 1.50.0
 - Fix `Number::as_[u128,i128]` unsoundness issues (#29)
 - Fix number parsing, preferring integer parsing (#33)
+- Double float parsing performance for `Number::from_str` using the crate
+    [`flast-float`](https://crates.io/crates/fast-float).
 
 # 0.4.0
 - Add `Borrow` trait to `Kstr`

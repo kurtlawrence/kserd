@@ -337,7 +337,11 @@ mod fuzzing {
                 id_on_primitives: rng.gen(),
                 id_on_seqs: rng.gen(),
                 id_on_maps: rng.gen(),
-                width_limit: rng.gen(),
+                width_limit: if rng.gen() {
+                    Some(rng.gen_range(0, 120))
+                } else {
+                    None
+                },
                 ..Default::default()
             }
         }
