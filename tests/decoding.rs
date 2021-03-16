@@ -1,9 +1,8 @@
 #![cfg(feature = "encode")]
-#[macro_use]
-extern crate serde_derive;
 
 use kserd::*;
-use std::collections::HashMap;
+use serde_derive::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 use std::f32::consts::PI as PI32;
 use std::f64::consts::PI as PI64;
 
@@ -50,12 +49,19 @@ fn unit_struct() {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct EmptyStruct();
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct EmptyStruct2 {}
 
 #[test]
 fn empty_struct() {
     let s = EmptyStruct();
     let kserd = Kserd::enc(&s).unwrap();
     let r = kserd.decode::<EmptyStruct>();
+    assert_eq!(r, Ok(s));
+
+    let s = EmptyStruct2 {};
+    let kserd = Kserd::enc(&s).unwrap();
+    let r = kserd.decode::<EmptyStruct2>();
     assert_eq!(r, Ok(s));
 }
 
@@ -86,7 +92,16 @@ struct SomeStruct {
     ns: Option<Box<SomeStruct>>,
     u: (),
     un: UnitStruct,
+    rs: Result<Box<SomeStruct>, UnitStruct>,
+    en: Enum,
+    its: Its,
+    itsv: Vec<Its>,
+    ens: Vec<Enum>,
+    sv: Vec<SomeStruct>,
+    map: BTreeMap<String, SomeStruct>,
 }
+
+type Its = (Option<Box<SomeStruct>>, i32, f64, String);
 
 #[test]
 fn structs() {
@@ -97,6 +112,13 @@ fn structs() {
         ns: None,
         u: (),
         un: UnitStruct,
+        en: Enum::One,
+        ens: vec![Enum::One, Enum::Two],
+        its: (None, 0, 0.0, String::new()),
+        itsv: vec![],
+        map: Default::default(),
+        rs: Err(UnitStruct),
+        sv: vec![],
     };
 
     let kserd = Kserd::enc(&s).unwrap();
@@ -114,9 +136,23 @@ fn structs() {
             ns: None,
             u: (),
             un: UnitStruct,
+            en: Enum::One,
+            ens: vec![Enum::One, Enum::Two],
+            its: (None, 0, 0.0, String::new()),
+            itsv: vec![],
+            map: Default::default(),
+            rs: Err(UnitStruct),
+            sv: vec![],
         })),
         u: (),
         un: UnitStruct,
+        en: Enum::One,
+        ens: vec![Enum::One, Enum::Two],
+        its: (None, 0, 0.0, String::new()),
+        itsv: vec![],
+        map: Default::default(),
+        rs: Err(UnitStruct),
+        sv: vec![],
     };
 
     let kserd = Kserd::enc(&s).unwrap();
