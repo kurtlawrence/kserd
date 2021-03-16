@@ -13,7 +13,7 @@ jobs:
       matrix:
         name: [default-features, no-features, all-features, format, encode, parse]
         os: [ubuntu-latest, windows-latest]
-        rust: [nightly, stable, 1.50]
+        rust: [nightly, stable, 1.50.0]
         include:
           - name: default-features
             cmd: cargo check
