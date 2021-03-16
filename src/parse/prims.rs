@@ -39,13 +39,13 @@ fn int<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, i128, E> {
 }
 
 fn num<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Number, E> {
+    const ALLOW: &str = "-.e";
     context(
         "number",
-        alt((
-            map(double, Number::from),
-            map(int, Number::from),
-            map(uint, Number::from),
-        )),
+        map_parser(
+            take_while(|c: char| c.is_ascii_digit() || ALLOW.contains(c)),
+            from_str,
+        ),
     )(i)
 }
 
@@ -248,5 +248,71 @@ mod tests {
         assert_eq!(r, Ok((",", Barr::brwed(&[82]))));
         let r = barr::<VerboseError<_>>("b91'],',");
         assert_eq!(r, Ok((",", Barr::brwed(&[143]))));
+    }
+
+    #[test]
+    fn unsigned_numbers() {
+        let u = |x: u128| {
+            assert_eq!(
+                Some(x),
+                num::<()>(&x.to_string())
+                    .ok()
+                    .and_then(|x| x.1.as_u128().ok())
+            )
+        };
+        u(0);
+        u(1);
+        u(std::u8::MAX as u128);
+        u(std::u16::MAX as u128);
+        u(std::u32::MAX as u128);
+        u(std::u64::MAX as u128);
+        u(std::u128::MAX as u128);
+        u(16803534192531604596);
+        u(16803534192531605504);
+    }
+
+    #[test]
+    fn signed_numbers() {
+        let u = |x: i128| {
+            assert_eq!(
+                Some(x),
+                num::<()>(&x.to_string())
+                    .ok()
+                    .and_then(|x| x.1.as_i128().ok())
+            )
+        };
+        u(0);
+        u(1);
+        u(-1);
+        u(std::i8::MAX as i128);
+        u(std::i8::MIN as i128);
+        u(std::i16::MAX as i128);
+        u(std::i16::MIN as i128);
+        u(std::i32::MAX as i128);
+        u(std::i32::MIN as i128);
+        u(std::i64::MAX as i128);
+        u(std::i64::MIN as i128);
+        u(std::i128::MAX as i128);
+        u(std::i128::MIN as i128);
+    }
+
+    #[test]
+    fn float_numbers() {
+        let u = |x: f64| {
+            assert_eq!(
+                Some(x),
+                num::<()>(&x.to_string()).ok().map(|x| x.1.as_f64())
+            )
+        };
+        use std::f64::consts::*;
+        u(0.0);
+        u(-0.0);
+        u(E);
+        u(FRAC_1_PI);
+        u(FRAC_1_SQRT_2);
+        u(LN_2);
+        u(LN_10);
+        u(PI);
+        u(TAU);
     }
 }

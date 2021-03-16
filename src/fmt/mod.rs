@@ -197,7 +197,7 @@ const INDENT: usize = 4;
 /// ```
 ///
 /// [`Kserd`]: crate::Kserd
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FormattingConfig {
     /// Display the identity on primitive values.
     /// _Default is false._

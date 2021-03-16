@@ -2,9 +2,11 @@
 
 use kserd::*;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
-use std::f32::consts::PI as PI32;
-use std::f64::consts::PI as PI64;
+use std::{
+    collections::{BTreeMap, HashMap},
+    f32::consts::PI as PI32,
+    f64::consts::PI as PI64,
+};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 struct UnitStruct;
@@ -231,4 +233,141 @@ fn maps() {
     let kserd = Kserd::enc(&m).unwrap();
     let r = kserd.mk_brw().decode::<HashMap<&str, u32>>();
     assert_eq!(r, Ok(m));
+}
+
+// ###### FUZZING ##############################################################
+// Fuzzing is meant for round trip checks of encoding, serialisation, parsing, decoding.
+mod fuzzing {
+    use super::*;
+    use kserd::fmt::FormattingConfig;
+    use rand::{rngs::ThreadRng, *};
+    use std::error;
+
+    trait Fuzz {
+        fn produce(rng: &mut ThreadRng) -> Self;
+    }
+
+    macro_rules! impl_fuzz {
+        ($($t:ty)*) => {
+            $(
+            impl Fuzz for $t { fn produce(rng: &mut ThreadRng) -> Self { rng.gen() } }
+            )*
+        };
+    }
+    impl_fuzz! {
+        u8 u16 u32 u64 u128 usize
+        i8 i16 i32 i64 i128 isize
+        f32 f64
+    }
+
+    const FUZZ_ITERATIONS: u64 = 10_000;
+
+    fn check_round_trip<T>(
+        rng: &mut ThreadRng,
+    ) -> Result<(), (Box<dyn error::Error>, T, FormattingConfig)>
+    where
+        T: Fuzz + serde::Serialize + PartialEq,
+        T: for<'a> serde::Deserialize<'a>,
+    {
+        let t = T::produce(rng);
+        let fmt_config = FormattingConfig::produce(rng);
+        let kserd = match Kserd::enc(&t) {
+            Ok(x) => x,
+            Err(e) => return Err((format!("Kserd::enc error: {}", e).into(), t, fmt_config)),
+        };
+        let s = kserd.as_str_with_config(fmt_config);
+        let d = match kserd::parse::parse(&s) {
+            Ok(x) => x,
+            Err(e) => {
+                return Err((
+                    format!("Kserd::parse error: {}", e.backtrace()).into(),
+                    t,
+                    fmt_config,
+                ))
+            }
+        };
+        if d != kserd {
+            return Err((
+                "The deserialised Kserd did not match the input Kserd".into(),
+                t,
+                fmt_config,
+            ));
+        }
+        let tt = match d.decode::<T>() {
+            Ok(x) => x,
+            Err(e) => return Err((format!("Kserd::decode error: {}", e).into(), t, fmt_config)),
+        };
+        if t != tt {
+            Err((
+                "The decoded T does not match in the input T".into(),
+                t,
+                fmt_config,
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    macro_rules! check_round_trip {
+    ($($fn:ident<$type:ty>),*) => {
+        $(
+            check_round_trip!($fn, $type);
+        )*
+    };
+    ($fn:ident, $type:ty) => {
+        #[test]
+        fn $fn() {
+            let mut rng = rand::thread_rng();
+            for _ in 0..FUZZ_ITERATIONS {
+                if let Err((e, t, f)) = check_round_trip::<$type>(&mut rng) {
+                    println!("---- Failure checking round trip for type `{}`", stringify!($type));
+                    println!("---- Error message: {}", e);
+                    println!("---- Value that failed:\n{:#?}", t);
+                    println!("---- FormattingConfig:\n{:#?}", f);
+                    panic!("Failure checking round trip for type `{}`", stringify!($type));
+                }
+            }
+        }
+    };
+}
+
+    impl Fuzz for FormattingConfig {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            Self {
+                id_on_primitives: rng.gen(),
+                id_on_seqs: rng.gen(),
+                id_on_maps: rng.gen(),
+                width_limit: rng.gen(),
+                ..Default::default()
+            }
+        }
+    }
+
+    check_round_trip! {
+        fuzz_rt_u8<u8>, fuzz_rt_u16<u16>, fuzz_rt_u32<u32>, fuzz_rt_u64<u64>, fuzz_rt_u128<u128>, fuzz_rt_usize<usize>,
+        fuzz_rt_i8<i8>, fuzz_rt_i16<i16>, fuzz_rt_i32<i32>, fuzz_rt_i64<i64>, fuzz_rt_i128<i128>, fuzz_rt_isize<isize>,
+        fuzz_rt_f32<f32>, fuzz_rt_f64<f64>
+    }
+}
+
+#[test]
+fn u8_decode_test() {
+    let x = 123u8;
+    let y = Kserd::enc(&x).unwrap();
+    let y = y.as_str();
+    let y = kserd::parse::parse(&y).unwrap();
+    let y = y.decode::<u8>().unwrap();
+    assert_eq!(x, y);
+}
+
+#[test]
+fn u64_decode_test() {
+    let x = 16803534192531604596u64;
+    let y = Kserd::enc(&x).unwrap();
+    let y = y.as_str();
+    println!("Serialized: {}", y);
+    let y = kserd::parse::parse(&y).unwrap();
+    println!("Parsed: {:?}", y);
+    let y = y.decode::<u64>().unwrap();
+    assert_eq!(x, y);
 }

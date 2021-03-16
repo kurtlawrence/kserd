@@ -104,6 +104,27 @@ type Res<T> = Result<T, Error>;
 /// [`.mk_brw()`]: crate::Kserd::mk_brw
 pub struct Decoder<'de>(pub Kserd<'de>);
 
+macro_rules! de_integer {
+    (unsigned => $($t:ty = $fn:ident $vfn:ident),*) => {
+        $( de_integer!(as_u128, $fn, $vfn, $t); )*
+    };
+    (signed => $($t:ty = $fn:ident $vfn:ident),*) => {
+        $( de_integer!(as_i128, $fn, $vfn, $t); )*
+    };
+    ($nfn:ident, $fn:ident, $vfn:ident, $t:ty) => {
+        fn $fn<V: Visitor<'de>>(self, visitor: V) -> Res<V::Value> {
+            use std::convert::TryFrom;
+            match self.0.val {
+                Value::Num(n) => n.$nfn()
+                    .map_err(|e| Error::Message(e.to_string()))
+                    .and_then(|x| <$t>::try_from(x).map_err(|e| Error::Message(e.to_string())))
+                    .and_then(|x| visitor.$vfn(x)),
+                x => Err(de::Error::invalid_type(unexp_err(&x), &stringify!($t)))
+            }
+        }
+    };
+}
+
 impl<'de> de::Deserializer<'de> for Decoder<'de> {
     type Error = Error;
 
@@ -180,9 +201,36 @@ impl<'de> de::Deserializer<'de> for Decoder<'de> {
     }
 
     forward_to_deserialize_any! {
-        bool i8 i16 i32 i64 i128 u8 u16 u32 u64 u128 f32 f64 str string
+        bool str string
         bytes byte_buf option unit unit_struct newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
+    }
+
+    de_integer! { unsigned =>
+        u8 = deserialize_u8 visit_u8,
+        u16 = deserialize_u16 visit_u16,
+        u32 = deserialize_u32 visit_u32,
+        u64 = deserialize_u64 visit_u64,
+        u128 = deserialize_u128 visit_u128
+    }
+    de_integer! { signed =>
+        i8 = deserialize_i8 visit_i8,
+        i16 = deserialize_i16 visit_i16,
+        i32 = deserialize_i32 visit_i32,
+        i64 = deserialize_i64 visit_i64,
+        i128 = deserialize_i128 visit_i128
+    }
+    fn deserialize_f32<V: Visitor<'de>>(self, visitor: V) -> Res<V::Value> {
+        match self.0.val {
+            Value::Num(n) => visitor.visit_f32(n.as_f64() as f32),
+            x => Err(de::Error::invalid_type(unexp_err(&x), &stringify!($t))),
+        }
+    }
+    fn deserialize_f64<V: Visitor<'de>>(self, visitor: V) -> Res<V::Value> {
+        match self.0.val {
+            Value::Num(n) => visitor.visit_f64(n.as_f64()),
+            x => Err(de::Error::invalid_type(unexp_err(&x), &stringify!($t))),
+        }
     }
 
     fn deserialize_char<V: Visitor<'de>>(self, visitor: V) -> Res<V::Value> {

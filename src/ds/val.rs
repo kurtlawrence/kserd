@@ -132,8 +132,6 @@ impl Value<'static> {
     /// let value = Value::new_num(3.14);
     /// assert_eq!(value.float(), Some(3.14));
     /// ```
-    ///
-    /// [`NumberType`]: crate::ds::NumberType
     pub fn new_num<T: NumberType>(value: T) -> Self {
         Value::Num(value.into())
     }
