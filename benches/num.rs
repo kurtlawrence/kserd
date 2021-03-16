@@ -12,6 +12,9 @@ fn num_from_str(c: &mut Criterion) {
     c.bench_function("number from float str", |b| {
         b.iter(|| Number::from_str(black_box("-1234.56789e-12")))
     });
+    c.bench_function("number from float str shorter", |b| {
+        b.iter(|| Number::from_str(black_box("6800123.769")))
+    });
     c.bench_function("number (err path) from err str", |b| {
         b.iter(|| Number::from_str(black_box("12454  432 afsaf")))
     });

@@ -237,7 +237,7 @@ impl FromStr for Number {
             .all(|b| b.is_ascii_digit() || *b == b'_');
 
         if !valid_int {
-            s.parse::<f64>().map(Float).map_err(|_| IntoNumberErr)
+            ::fast_float::parse(s).map(Float).map_err(|_| IntoNumberErr)
         } else if neg {
             parse_format::<i128>(bytes, fmt)
                 .map(Int)
