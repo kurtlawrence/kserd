@@ -288,7 +288,12 @@ pub fn apply_config(fmtr: &mut Formatter, config: FormattingConfig) {
     let inline_widths = solver::inline_widths(&root, &config);
     let concise_widths = solver::concise_widths(&root, &config, &inline_widths);
 
-    let repr = min_line_repr(0, config.width_limit, &inline_widths, &concise_widths);
+    let repr = min_line_repr(
+        0,
+        config.width_limit.map(|x| x as usize),
+        &inline_widths,
+        &concise_widths,
+    );
 
     let decendants = root
         .descendants_breadth()
@@ -304,7 +309,9 @@ pub fn apply_config(fmtr: &mut Formatter, config: FormattingConfig) {
     for c in decendants {
         let offset = calculate_offset(fmtr.get(c).unwrap(), fmtr.fmts(), &inline_widths);
 
-        let lim = config.width_limit.map(|x| x.saturating_sub(offset));
+        let lim = config
+            .width_limit
+            .map(|x| (x as usize).saturating_sub(offset));
         let repr = min_line_repr(c, lim, &inline_widths, &concise_widths);
 
         // manually change some

@@ -35,83 +35,32 @@ fn num<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Number, E> {
     )(i)
 }
 
-/// Takes what could be string contents until a string terminator is reached.
-/// The terminator is one of [`"`, `'`, `\t`, `\r`, `\n`].
-fn take_str_until_terminated(i: &str) -> (&str, &str) {
-    let mut preceded_by_backslash = false;
-
-    for (idx, ch) in i.char_indices() {
-        if "\t\r\n".contains(ch) {
-            return (&i[idx..], &i[..idx]);
-        }
-        if !preceded_by_backslash && ch == '\"' {
-            return (&i[idx..], &i[..idx]);
-        }
-
-        preceded_by_backslash = ch == '\\';
-    }
-
-    let to = i.len();
-
-    (&i[to..], &i[..to])
-}
-
-const ESC_QUOTE: &str = r#"\'"#;
-const ESC_DBL_QUOTE: &str = r#"\""#;
-const ESC_BACKSLASH: &str = r#"\"#;
-const ESC_TAB: &str = r#"\t"#;
-const ESC_CR: &str = r#"\r"#;
-const ESC_LF: &str = r#"\n"#;
-
-fn str_contains_escaped(i: &str) -> bool {
-    i.contains(ESC_QUOTE)
-        || i.contains(ESC_DBL_QUOTE)
-        || i.contains(ESC_BACKSLASH)
-        || i.contains(ESC_TAB)
-        || i.contains(ESC_CR)
-        || i.contains(ESC_LF)
-}
-
-fn parse_str(i: &str) -> (&str, Kstr<'_>) {
-    let (i, string) = take_str_until_terminated(i);
-
-    let kstr = if str_contains_escaped(string) {
-        let string = string
-            .replace(ESC_QUOTE, "'")
-            .replace(ESC_DBL_QUOTE, "\"")
-            .replace(ESC_BACKSLASH, "\\")
-            .replace(ESC_TAB, "\t")
-            .replace(ESC_CR, "\r")
-            .replace(ESC_LF, "\n");
-
-        Kstr::owned(string)
-    } else {
-        Kstr::brwed(string)
-    };
-
-    (i, kstr)
+fn parse_str<'a, E: ParseError<&'a str>>(
+    delimiter: char,
+) -> impl Fn(&'a str) -> IResult<&'a str, Kstr<'a>, E> {
+    preceded(
+        char(delimiter),
+        cut(terminated(
+            map(take_till(move |c| c == delimiter), Kstr::brwed),
+            char(delimiter),
+        )),
+    )
 }
 
 fn string<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
-    context(
-        "string",
-        preceded(
-            char('\"'),
-            cut(terminated(|i| Ok(parse_str(i)), char('\"'))),
-        ),
-    )(i)
-}
-
-#[inline(always)]
-pub fn barr_tag<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    tag("b91'")(i)
+    let (d, i) = if let Some(suff) = i.strip_prefix("str") {
+        (suff.chars().next().unwrap_or('"'), suff)
+    } else {
+        ('"', i)
+    };
+    context("string", parse_str(d))(i)
 }
 
 fn barr<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E> {
     context(
         "base 91 byte array",
         preceded(
-            barr_tag,
+            tag("b91'"),
             cut(terminated(
                 map(take_till(|c| c == '\''), |bytes: &str| {
                     Barr::owned(base91::slice_decode(bytes.as_bytes()))
@@ -159,47 +108,26 @@ mod tests {
 
     #[test]
     fn test_string() {
-        macro_rules! test_parse_str {
-	    ( $($str:literal),* ) => {
-		$(
-		    let var: &str = $str;
-		    let s = format!("{}", var);
-		    let r = parse_str(&s);
-		    assert_eq!(r, ("", Kstr::brwed(var)));
-		)*
-	    };
-	}
-
-        assert_eq!(parse_str(" \""), ("\"", Kstr::brwed(" ")));
-        assert_eq!(parse_str(" \t"), ("\t", Kstr::brwed(" ")));
-        assert_eq!(parse_str(" \r"), ("\r", Kstr::brwed(" ")));
-        assert_eq!(parse_str(" \n"), ("\n", Kstr::brwed(" ")));
-
-        test_parse_str!("", "abcd");
-
         macro_rules! test_str {
-	    ( $($str:literal),* ) => {
+	    ( $($parse:literal $res:literal $rem:literal),* ) => {
 		$(
-		    let var: &str = $str;
-		    let s = format!("{:?}", var);
-		    println!("{}", s);
-		    let r = string::<VerboseError<_>>(&s);
-		    assert_eq!(r, Ok(("", Kstr::brwed(var))));
+		    let r = string::<VerboseError<_>>($parse);
+		    assert_eq!(r, Ok(($rem, Kstr::brwed($res))));
 		)*
 	    };
 	}
 
         test_str!(
-            "",
-            "abcdef",
-            "Hello, world!",
-            "Hello\nnewline",
-            " ",
-            "\r\n \n",
-            "\t",
-            "  \"  ",
-            "  '  ",
-            "'\t\n\r\n\""
+            r#""""# "" "",
+            r#""abcdef""# "abcdef" "",
+            r#""Hello, world!""# "Hello, world!" "",
+            "\"Hello\nnewline\"" "Hello\nnewline" "",
+            "\" \"" " " "",
+            "\"\r\n \n\"" "\r\n \n" "",
+            "\"\t\"" "\t" "",
+            "str'  \"  '" "  \"  " "",
+            "str\"  '  \"" "  '  " "",
+            "\"'\t\n\r\n\"" "'\t\n\r\n" ""
         );
     }
 

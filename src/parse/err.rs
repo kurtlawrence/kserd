@@ -319,9 +319,9 @@ mod tests {
         assert_eq!(
             err.get(0),
             Some(Trace {
-                line: 3,
-                col: 11,
-                linestr: r#"("key, 1):"#,
+                line: 4,
+                col: 16,
+                linestr: "    [1,2,3,,4]",
                 msg: r#"expected '"', reached end of line or end of file first"#.to_string(),
             })
         );

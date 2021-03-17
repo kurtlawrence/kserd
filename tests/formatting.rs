@@ -160,7 +160,7 @@ fn fmt_float() {
 
 #[test]
 fn fmt_str() {
-    let kserd = Kserd::enc(&"My ❤ beats,\non a new line!").unwrap();
+    let kserd = Kserd::enc(&"My ❤ \"beats\",\non a 'new' line!").unwrap();
 
     let with_ident = FormattingConfig {
         id_on_primitives: true,
@@ -174,11 +174,13 @@ fn fmt_str() {
 
     assert_eq!(
         &kserd.as_str_with_config(without_ident),
-        r#""My ❤ beats,\non a new line!""#
+        r##"str#My ❤ "beats",
+on a 'new' line!#"##
     );
     assert_eq!(
         &kserd.as_str_with_config(with_ident),
-        r#"<str> "My ❤ beats,\non a new line!""#
+        r##"<str> str#My ❤ "beats",
+on a 'new' line!#"##
     );
 }
 
@@ -199,11 +201,13 @@ fn fmt_string() {
 
     assert_eq!(
         &kserd.as_str_with_config(without_ident),
-        r#""My ❤ beats,\non a new line!""#
+        r#""My ❤ beats,
+on a new line!""#
     );
     assert_eq!(
         &kserd.as_str_with_config(with_ident),
-        r#"<str> "My ❤ beats,\non a new line!""#
+        r#"<str> "My ❤ beats,
+on a new line!""#
     );
 }
 

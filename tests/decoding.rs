@@ -241,7 +241,7 @@ mod fuzzing {
     use super::*;
     use kserd::fmt::FormattingConfig;
     use rand::{rngs::ThreadRng, *};
-    use std::error;
+    use std::{error, iter::*};
 
     trait Fuzz {
         fn produce(rng: &mut ThreadRng) -> Self;
@@ -257,7 +257,24 @@ mod fuzzing {
     impl_fuzz! {
         u8 u16 u32 u64 u128 usize
         i8 i16 i32 i64 i128 isize
-        f32 f64
+        f32 f64 bool
+    }
+    impl Fuzz for () {
+        fn produce(_: &mut ThreadRng) -> () {
+            ()
+        }
+    }
+    impl Fuzz for String {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            let take = rng.gen_range(0, 30);
+            repeat_with(|| rng.gen::<char>()).take(take).collect()
+        }
+    }
+    impl Fuzz for Vec<u8> {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            let take = rng.gen_range(0, 30);
+            repeat_with(|| rng.gen::<u8>()).take(take).collect()
+        }
     }
 
     const FUZZ_ITERATIONS: u64 = 10_000;
@@ -347,11 +364,15 @@ mod fuzzing {
         }
     }
 
+    check_round_trip! { fuzz_rt_unit<()> } // Unit
+    check_round_trip! { fuzz_rt_bool<bool> } // Boolean
+                                             // Numbers
     check_round_trip! {
         fuzz_rt_u8<u8>, fuzz_rt_u16<u16>, fuzz_rt_u32<u32>, fuzz_rt_u64<u64>, fuzz_rt_u128<u128>, fuzz_rt_usize<usize>,
         fuzz_rt_i8<i8>, fuzz_rt_i16<i16>, fuzz_rt_i32<i32>, fuzz_rt_i64<i64>, fuzz_rt_i128<i128>, fuzz_rt_isize<isize>,
         fuzz_rt_f32<f32>, fuzz_rt_f64<f64>
     }
+    check_round_trip! { fuzz_rt_string<String>, fuzz_rt_bytes<Vec<u8>> } // Bytes
 }
 
 #[test]
@@ -373,5 +394,18 @@ fn u64_decode_test() {
     let y = kserd::parse::parse(&y).unwrap();
     println!("Parsed: {:?}", y);
     let y = y.decode::<u64>().unwrap();
+    assert_eq!(x, y);
+}
+
+#[test]
+fn str_decode_test() {
+    let x = "𦭅\u{f51e9}\u{1621c}\u{147ea}\u{c2706}\u{197af}\u{f644c}\u{84d9d}𢣸\u{9fffb}\u{6cf65}\u{d2541}\u{e7be8}\u{72071}\u{f8030}\u{925b3}\u{67e40}\u{7fa89}";
+    println!("String: {}", x);
+    let y = Kserd::enc(&x).unwrap();
+    let y = y.as_str();
+    println!("Serialized: {}", y);
+    let y = kserd::parse::parse(&y).unwrap();
+    println!("Parsed: {:?}", y);
+    let y = y.decode::<String>().unwrap();
     assert_eq!(x, y);
 }

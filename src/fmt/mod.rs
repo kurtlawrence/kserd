@@ -336,7 +336,7 @@ pub struct FormattingConfig {
     ///
     /// [`FormattingConfig`]: FormattingConfig
     /// [`Kserd`]: crate::Kserd
-    pub width_limit: Option<usize>,
+    pub width_limit: Option<u16>,
     // pub line_limit: Option<usize>, // TODO: Include this on stabilisation
 }
 
@@ -492,70 +492,74 @@ impl<'a> Display for Kserd<'a> {
     }
 }
 
-#[test]
-fn test_mod_docs_example() {
-    // we will manually construct a Kserd, but you could use Serialize
-    // to do this instead.
-    let cargotoml = Kserd::with_id(
-        "my-crate",
-        Value::new_cntr(vec![
-            (
-                "package",
-                Kserd::with_id(
-                    "Package",
-                    Value::new_cntr(vec![
-                        ("name", Kserd::new_str("a-crate")),
-                        ("version", Kserd::new_str("0.1.0")),
-                    ])
-                    .unwrap(),
-                )
-                .unwrap(),
-            ),
-            (
-                "dependencies",
-                Kserd::new(Value::Seq(vec![
-                    Kserd::new_cntr(vec![
-                        ("name", Kserd::new_str("serde")),
-                        ("version", Kserd::new_str("1")),
-                    ])
-                    .unwrap(),
-                    Kserd::new_cntr(vec![
-                        ("name", Kserd::new_str("rand")),
-                        ("version", Kserd::new_str("0.5")),
-                    ])
-                    .unwrap(),
-                ])),
-            ),
-        ])
-        .unwrap(),
-    )
-    .unwrap();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // let's look at the default formatting
-    let s = cargotoml.as_str();
+    #[test]
+    fn test_mod_docs_example() {
+        // we will manually construct a Kserd, but you could use Serialize
+        // to do this instead.
+        let cargotoml = Kserd::with_id(
+            "my-crate",
+            Value::new_cntr(vec![
+                (
+                    "package",
+                    Kserd::with_id(
+                        "Package",
+                        Value::new_cntr(vec![
+                            ("name", Kserd::new_str("a-crate")),
+                            ("version", Kserd::new_str("0.1.0")),
+                        ])
+                        .unwrap(),
+                    )
+                    .unwrap(),
+                ),
+                (
+                    "dependencies",
+                    Kserd::new(Value::Seq(vec![
+                        Kserd::new_cntr(vec![
+                            ("name", Kserd::new_str("serde")),
+                            ("version", Kserd::new_str("1")),
+                        ])
+                        .unwrap(),
+                        Kserd::new_cntr(vec![
+                            ("name", Kserd::new_str("rand")),
+                            ("version", Kserd::new_str("0.5")),
+                        ])
+                        .unwrap(),
+                    ])),
+                ),
+            ])
+            .unwrap(),
+        )
+        .unwrap();
 
-    assert_eq!(
-        &s,
-        r#"my-crate (
+        // let's look at the default formatting
+        let s = cargotoml.as_str();
+
+        assert_eq!(
+            &s,
+            r#"my-crate (
     dependencies = [
                        (name = "serde", version = "1")
                        (name = "rand", version = "0.5")
                    ]
     package = Package (name = "a-crate", version = "0.1.0")
 )"#
-    );
+        );
 
-    // we can format it much more verbosely
-    // it becomes more readable
-    let config = FormattingConfig {
-        width_limit: Some(0),
-        ..Default::default()
-    };
-    let s = cargotoml.as_str_with_config(config);
+        // we can format it much more verbosely
+        // it becomes more readable
+        let config = FormattingConfig {
+            width_limit: Some(0),
+            ..Default::default()
+        };
+        let s = cargotoml.as_str_with_config(config);
 
-    assert_eq!(
-        &s,
-        r#"
+        assert_eq!(
+            &s,
+            r#"
 [[dependencies]]
     name = "serde"
     version = "1"
@@ -568,29 +572,29 @@ fn test_mod_docs_example() {
     name = "a-crate"
     version = "0.1.0"
 "#
-    );
+        );
 
-    // maybe we want the package to be inline.
+        // maybe we want the package to be inline.
 
-    let mut fmtr = Formatter::new(&cargotoml);
+        let mut fmtr = Formatter::new(&cargotoml);
 
-    fmtr.apply_config(config); // apply the config as before
+        fmtr.apply_config(config); // apply the config as before
 
-    // we get the index of the Package by filtering on id
-    fmtr.inline(
-        fmtr.nodes()
-            .filter(|n| n.kserd().id() == Some("Package"))
-            .map(|n| n.index())
-            .next()
-            .unwrap(),
-    )
-    .unwrap();
+        // we get the index of the Package by filtering on id
+        fmtr.inline(
+            fmtr.nodes()
+                .filter(|n| n.kserd().id() == Some("Package"))
+                .map(|n| n.index())
+                .next()
+                .unwrap(),
+        )
+        .unwrap();
 
-    let s = fmtr.write_string(String::new());
+        let s = fmtr.write_string(String::new());
 
-    assert_eq!(
-        &s,
-        r#"
+        assert_eq!(
+            &s,
+            r#"
 [[dependencies]]
     name = "serde"
     version = "1"
@@ -600,5 +604,26 @@ fn test_mod_docs_example() {
     version = "0.5"
 package = Package (name = "a-crate", version = "0.1.0")
 "#
-    );
+        );
+    }
+
+    #[test]
+    fn string_formatting_test() {
+        let s = |s| Kserd::new_str(s).as_str();
+
+        assert_eq!(s(""), r#""""#);
+        assert_eq!(s("Hello, world!"), r#""Hello, world!""#);
+        assert_eq!(
+            s("Hello\nWorld"),
+            r#""Hello
+World""#
+        );
+        assert_eq!(s("Hello \"World\""), r#"str'Hello "World"'"#);
+        assert_eq!(
+            s("'Hello'\n\"World\""),
+            r##"str#'Hello'
+"World"#"##
+        );
+        assert_eq!(s("#Hello# \"World\""), r#"str'#Hello# "World"'"#);
+    }
 }
