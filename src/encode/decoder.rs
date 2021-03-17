@@ -135,17 +135,7 @@ impl<'de> de::Deserializer<'de> for Decoder<'de> {
         let Kserd { id, val } = self.0;
 
         match val {
-            Value::Unit => {
-                if let Some(id) = id {
-                    if id.as_str() == "None" {
-                        visitor.visit_none()
-                    } else {
-                        visitor.visit_unit()
-                    }
-                } else {
-                    visitor.visit_unit()
-                }
-            }
+            Value::Unit => visitor.visit_unit(),
             Value::Bool(v) => visitor.visit_bool(v),
             Value::Num(num) => {
                 // serde's implementation will try to cast
@@ -176,22 +166,13 @@ impl<'de> de::Deserializer<'de> for Decoder<'de> {
                 Borrowed(v) => visitor.visit_borrowed_bytes(v),
                 Owned(v) => visitor.visit_byte_buf(v),
             },
-            Value::Tuple(mut seq) => {
-                if let Some(id) = id {
-                    if seq.len() == 1 {
-                        if id.as_str() == "Some" {
-                            visitor.visit_some(Decoder(seq.pop().expect("one should exist")))
-                        } else {
-                            visitor
-                                .visit_newtype_struct(Decoder(seq.pop().expect("one should exist")))
-                        }
-                    } else {
-                        visitor.visit_seq(SeqDeserializer::new(seq.into_iter()))
-                    }
-                } else {
-                    visitor.visit_seq(SeqDeserializer::new(seq.into_iter()))
-                }
-            }
+            Value::Tuple(mut seq) => match (seq.len(), id.as_ref().map(|x| x.as_str())) {
+                (0, Some("None")) => visitor.visit_none(),
+                (1, Some("Some")) => visitor.visit_some(Decoder(seq.pop().expect("only one item"))),
+                (1, None) => visitor.visit_seq(SeqDeserializer::new(seq.into_iter())),
+                (1, _) => visitor.visit_newtype_struct(Decoder(seq.pop().expect("only one item"))),
+                _ => visitor.visit_seq(SeqDeserializer::new(seq.into_iter())),
+            },
             Value::Cntr(map) => visitor.visit_map(MapDeserializer::new(
                 map.into_iter().map(|(k, v)| (k.inner, v)),
             )),
@@ -202,7 +183,7 @@ impl<'de> de::Deserializer<'de> for Decoder<'de> {
 
     forward_to_deserialize_any! {
         bool str string
-        bytes byte_buf option unit unit_struct newtype_struct seq tuple
+        bytes byte_buf option unit newtype_struct seq tuple
         tuple_struct map struct identifier ignored_any
     }
 
@@ -249,6 +230,17 @@ impl<'de> de::Deserializer<'de> for Decoder<'de> {
         }
     }
 
+    fn deserialize_unit_struct<V: Visitor<'de>>(
+        self,
+        _: &'static str,
+        visitor: V,
+    ) -> Res<V::Value> {
+        match self.0.val {
+            Value::Tuple(seq) if seq.is_empty() => visitor.visit_unit(),
+            x => Err(de::Error::invalid_type(unexp_err(&x), &"unit struct")),
+        }
+    }
+
     fn deserialize_enum<V: Visitor<'de>>(
         self,
         _name: &'static str,
@@ -279,6 +271,9 @@ impl<'de> de::EnumAccess<'de> for Decoder<'de> {
             .id()
             .ok_or_else(|| Error::Message(String::from("enum but no identity is present")))?;
 
+        dbg!(&id);
+        dbg!(&self.0);
+
         seed.deserialize(id.into_deserializer())
             .map(|v| (v, Decoder(self.0)))
     }
@@ -288,42 +283,49 @@ impl<'de> de::VariantAccess<'de> for Decoder<'de> {
     type Error = Error;
 
     fn unit_variant(self) -> Result<(), Error> {
-        unexp_matching(self.0.val, &"unit value", |val| match val {
-            Value::Unit => Ok(Ok(())),
-            x => Err(x),
-        })
+        match self.0.val {
+            Value::Unit => Ok(()),
+            Value::Tuple(x) if x.is_empty() => Ok(()),
+            x => Err(de::Error::invalid_type(unexp_err(&x), &"unit enum variant")),
+        }
     }
 
     fn newtype_variant_seed<T>(self, seed: T) -> Result<T::Value, Error>
     where
         T: de::DeserializeSeed<'de>,
     {
-        unexp_matching(self.0.val, &"newtype enum variant", |val| match val {
-            Value::Tuple(mut v) => Ok(if v.len() == 1 {
+        match self.0.val {
+            Value::Tuple(mut v) if v.len() == 1 => {
                 seed.deserialize(Decoder(v.pop().expect("one should exist")))
-            } else {
-                Err(de::Error::invalid_length(
-                    v.len(),
-                    &"a tuple with a single element was expected",
-                ))
-            }),
-            x => Err(x),
-        })
+            }
+            Value::Tuple(v) => Err(de::Error::invalid_length(
+                v.len(),
+                &"a tuple with a single element was expected",
+            )),
+            x => Err(de::Error::invalid_type(
+                unexp_err(&x),
+                &"newtype enum variant",
+            )),
+        }
     }
 
     fn tuple_variant<V>(self, len: usize, visitor: V) -> Result<V::Value, Error>
     where
         V: Visitor<'de>,
     {
-        unexp_matching(self.0.val, &"tuple variant", |val| match val {
-            Value::Tuple(v) => Ok(if v.len() == len {
+        match self.0.val {
+            Value::Tuple(v) if v.len() == len => {
                 visitor.visit_seq(SeqDeserializer::new(v.into_iter()))
-            } else {
+            }
+            Value::Tuple(v) => {
                 let msg = format!("a tuple with {} element(s) was expected", len);
                 Err(de::Error::invalid_length(v.len(), &msg.as_str()))
-            }),
-            x => Err(x),
-        })
+            }
+            x => Err(de::Error::invalid_type(
+                unexp_err(&x),
+                &"tuple enum variant",
+            )),
+        }
     }
 
     fn struct_variant<V>(
@@ -334,12 +336,15 @@ impl<'de> de::VariantAccess<'de> for Decoder<'de> {
     where
         V: Visitor<'de>,
     {
-        unexp_matching(self.0.val, &"struct variant", |val| match val {
-            Value::Cntr(map) => Ok(visitor.visit_map(MapDeserializer::new(
+        match self.0.val {
+            Value::Cntr(map) => visitor.visit_map(MapDeserializer::new(
                 map.into_iter().map(|(k, v)| (k.inner, v)),
-            ))),
-            x => Err(x),
-        })
+            )),
+            x => Err(de::Error::invalid_type(
+                unexp_err(&x),
+                &"struct enum variant",
+            )),
+        }
     }
 }
 
@@ -360,18 +365,6 @@ fn unexp_err<'a, 'v>(val: &'a Value<'v>) -> Unexpected<'a> {
         Value::Cntr(_) => Unexpected::Other("container"),
         Value::Seq(_) => Unexpected::Seq,
         Value::Map(_) => Unexpected::Map,
-    }
-}
-
-fn unexp_matching<'v, T, E, F, S>(val: Value<'v>, expected: &S, matchfn: F) -> Result<T, E>
-where
-    F: FnOnce(Value<'v>) -> Result<Result<T, E>, Value<'v>>,
-    E: de::Error,
-    S: de::Expected,
-{
-    match matchfn(val) {
-        Ok(x) => x,
-        Err(val) => Err(de::Error::invalid_type(unexp_err(&val), expected)),
     }
 }
 
@@ -571,7 +564,7 @@ mod tests {
     fn test_newtype_struct() {
         let kserd = Kserd::with_id(
             "NewTypeTest",
-            Value::Tuple(vec![Kserd::new_barr([0, 1, 2].as_ref())]),
+            Value::Tuple(vec![Kserd::new_barr(&[0, 1, 2])]),
         )
         .unwrap();
         let expected = NewTypeTest(vec![0, 1, 2]);
@@ -637,7 +630,7 @@ mod tests {
             Decoder(Kserd::new_num(3))
                 .unit_variant()
                 .map_err(|e| e.to_string()),
-            Err("custom error: invalid type: integer `3`, expected unit value".into())
+            Err("custom error: invalid type: integer `3`, expected unit enum variant".into())
         );
 
         let kserd = Kserd::with_id(
@@ -681,7 +674,7 @@ mod tests {
             .map_err(|e| e.to_string());
         assert_eq!(
             r,
-            Err("custom error: invalid type: integer `3`, expected tuple variant".into())
+            Err("custom error: invalid type: integer `3`, expected tuple enum variant".into())
         );
 
         let kserd = Kserd::new_num(3);
@@ -690,7 +683,7 @@ mod tests {
             .map_err(|e| e.to_string());
         assert_eq!(
             r,
-            Err("custom error: invalid type: integer `3`, expected struct variant".into())
+            Err("custom error: invalid type: integer `3`, expected struct enum variant".into())
         );
     }
 
@@ -703,7 +696,7 @@ mod tests {
                         .tuple_variant(1, NoImplementVisitor)
                         .map_err(|e| e.to_string()),
                     Err(format!(
-                        "custom error: invalid type: {}, expected tuple variant",
+                        "custom error: invalid type: {}, expected tuple enum variant",
                         $exp
                     ))
                 );
@@ -718,15 +711,6 @@ mod tests {
         test!(Kserd::new_str("Hello"), "string \"Hello\"");
         test!(Kserd::new_barr([0, 1, 2].as_ref()), "byte array");
         // handle tuple outside
-        assert_eq!(
-            Decoder(Kserd::new(Value::Tuple(vec![])))
-                .unit_variant()
-                .map_err(|e| e.to_string()),
-            Err(format!(
-                "custom error: invalid type: {}, expected unit value",
-                "tuple"
-            ))
-        );
         test!(
             Kserd::new_cntr(vec![("a", Kserd::new_unit())]).unwrap(),
             "container"

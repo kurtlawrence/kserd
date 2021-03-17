@@ -363,6 +363,39 @@ mod fuzzing {
             }
         }
     }
+    impl<T: Fuzz> Fuzz for Option<T> {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            if rng.gen() {
+                Some(T::produce(rng))
+            } else {
+                None
+            }
+        }
+    }
+    impl<T: Fuzz, E: Fuzz> Fuzz for Result<T, E> {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            if rng.gen() {
+                Ok(T::produce(rng))
+            } else {
+                Err(E::produce(rng))
+            }
+        }
+    }
+    impl Fuzz for UnitStruct {
+        fn produce(_: &mut ThreadRng) -> Self {
+            Self
+        }
+    }
+    impl Fuzz for EmptyStruct {
+        fn produce(_: &mut ThreadRng) -> Self {
+            EmptyStruct()
+        }
+    }
+    impl Fuzz for EmptyStruct2 {
+        fn produce(_: &mut ThreadRng) -> Self {
+            EmptyStruct2 {}
+        }
+    }
 
     check_round_trip! { fuzz_rt_unit<()> } // Unit
     check_round_trip! { fuzz_rt_bool<bool> } // Boolean
@@ -373,6 +406,10 @@ mod fuzzing {
         fuzz_rt_f32<f32>, fuzz_rt_f64<f64>
     }
     check_round_trip! { fuzz_rt_string<String>, fuzz_rt_bytes<Vec<u8>> } // Bytes
+                                                                         // Common sum types
+    check_round_trip! { fuzz_rt_option<Option<usize>>, fuzz_rt_result<Result<f64, isize>> }
+    // Unit structs
+    check_round_trip! { fuzz_rt_unit_struct<UnitStruct>, fuzz_rt_empty_struct<EmptyStruct>, fuzz_rt_empty_struct2<EmptyStruct2> }
 }
 
 #[test]
@@ -408,4 +445,18 @@ fn str_decode_test() {
     println!("Parsed: {:?}", y);
     let y = y.decode::<String>().unwrap();
     assert_eq!(x, y);
+}
+
+#[test]
+fn empty_struct2_decode_test() {
+    let y = Kserd::enc(&EmptyStruct2 {}).unwrap();
+    let y = y.as_str_with_config(kserd::fmt::FormattingConfig {
+        width_limit: Some(0),
+        ..Default::default()
+    });
+    println!("Serialized: {}", y);
+    let y = kserd::parse::parse(&y).unwrap();
+    println!("Parsed: {:?}", y);
+    let y = y.decode::<EmptyStruct2>().unwrap();
+    assert_eq!(EmptyStruct2 {}, y);
 }

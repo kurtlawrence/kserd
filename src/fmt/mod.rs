@@ -84,7 +84,8 @@
 //!
 //! assert_eq!(
 //!     &s,
-//! r#"
+//! r#":my-crate
+//!
 //! [[dependencies]]
 //!     name = "serde"
 //!     version = "1"
@@ -94,6 +95,7 @@
 //!     version = "0.5"
 //!
 //! [package]
+//!     :Package
 //!     name = "a-crate"
 //!     version = "0.1.0"
 //! "#
@@ -119,7 +121,8 @@
 //!
 //! assert_eq!(
 //!     &s,
-//! r#"
+//! r#":my-crate
+//!
 //! [[dependencies]]
 //!     name = "serde"
 //!     version = "1"
@@ -565,7 +568,8 @@ mod tests {
 
         assert_eq!(
             &s,
-            r#"
+            r#":my-crate
+
 [[dependencies]]
     name = "serde"
     version = "1"
@@ -575,6 +579,7 @@ mod tests {
     version = "0.5"
 
 [package]
+    :Package
     name = "a-crate"
     version = "0.1.0"
 "#
@@ -600,7 +605,8 @@ mod tests {
 
         assert_eq!(
             &s,
-            r#"
+            r#":my-crate
+
 [[dependencies]]
     name = "serde"
     version = "1"

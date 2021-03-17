@@ -40,7 +40,7 @@ fn fmt_unit() {
     println!("{}", s);
     assert_eq!(
         &s,
-        r#"Units (uenum = EnumVariant, ustruct = AStruct, uvalue = ())"#
+        r#"Units (uenum = EnumVariant(), ustruct = AStruct(), uvalue = ())"#
     );
 
     config.width_limit = Some(25);
@@ -49,8 +49,8 @@ fn fmt_unit() {
     assert_eq!(
         &s,
         r#"Units (
-    uenum = EnumVariant
-    ustruct = AStruct
+    uenum = EnumVariant()
+    ustruct = AStruct()
     uvalue = ()
 )"#
     );
@@ -60,8 +60,9 @@ fn fmt_unit() {
     println!("{}", s);
     assert_eq!(
         &s,
-        r#"uenum = EnumVariant
-ustruct = AStruct
+        r#":Units
+uenum = EnumVariant()
+ustruct = AStruct()
 uvalue = ()
 "#
     );
@@ -349,7 +350,8 @@ fn fmt_struct() {
     println!("{}", s);
     assert_eq!(
         &s,
-        r#"a = 100
+        r#":Simple
+a = 100
 b = (
         -1
         -2
@@ -409,18 +411,22 @@ b = (
     println!("{}", s);
     assert_eq!(
         &s,
-        r#"
+        r#":Seq
+
 [[inner]]
+    :Simple
     a = 100
     b = (0, 1)
     c = [2, 3]
 
 [[inner]]
+    :Simple
     a = 101
     b = (1, 2)
     c = [4, 5]
 
 [[inner]]
+    :Simple
     a = 103
     b = (2, 3)
     c = [6, 7]
@@ -535,7 +541,8 @@ fn fmt_map() {
     println!("*** CONCISE - 35 width ***\n{}", s);
     assert_eq!(
         &s,
-        r#"mapping = {
+        r#":SimpleMap
+mapping = {
               (1, 2): (
                           a = 100
                           b = (0, 1)
@@ -562,21 +569,25 @@ name = "A simple mapping"
     println!("*** 14 width ***\n{}", s);
     assert_eq!(
         &s,
-        r#"
+        r#":SimpleMap
+
 [[mapping]]
 (1, 2):
+    :Simple
     a = 100
     b = (0, 1)
     c = [2, 3]
 
 [[mapping]]
 (2, 3):
+    :Simple
     a = 101
     b = (1, 2)
     c = [4, 5]
 
 [[mapping]]
 (3, 4):
+    :Simple
     a = 103
     b = (2, 3)
     c = [6, 7]

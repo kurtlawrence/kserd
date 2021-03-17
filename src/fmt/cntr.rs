@@ -75,6 +75,14 @@ pub(super) fn write(
             buf
         }),
         Repr::Verbose => {
+            // Names for containers follow :<id>
+            if let Some(id) = id {
+                write_indent(&mut buf, col);
+                buf.push(':');
+                buf.push_str(id);
+                buf.push('\n');
+            }
+
             for (name, v) in map {
                 // the formatting follows the following rules
                 // 1. if the child value is _not_ verbose then the value is prefixed with
@@ -169,7 +177,8 @@ mod tests {
         println!("{}", s);
         assert_eq!(
             &s,
-            "a = 101
+            ":Struct
+a = 101
 b = (
         0
         10101

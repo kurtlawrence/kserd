@@ -36,7 +36,7 @@ use std::{
 ///
 /// [`BTreeMap`]: std::collections::BTreeMap
 /// [`Kserd`]: crate::Kserd
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Eq, PartialOrd, Ord)]
 pub enum Value<'a> {
     /// A unit value `()`.
     Unit,
@@ -78,6 +78,36 @@ pub enum Value<'a> {
     ///
     /// A map is a _homogeneous mapping of keys to values_.
     Map(Map<'a>),
+}
+
+/// Equality is done per variant, _except for when a tuple and container are both empty_.
+///
+/// # Example
+/// ```rust
+/// # use kserd::*;
+/// assert_eq!(
+///     Value::Tuple(vec![]),
+///     Value::new_cntr(<Vec<(&str,_)>>::new()).unwrap()
+/// );
+/// ```
+impl<'a> PartialEq for Value<'a> {
+    fn eq(&self, b: &Self) -> bool {
+        use Value::*;
+        match (self, b) {
+            (Tuple(a), Cntr(b)) if a.is_empty() && b.is_empty() => true,
+            (Cntr(a), Tuple(b)) if a.is_empty() && b.is_empty() => true,
+            (Unit, Unit) => true,
+            (Bool(a), Bool(b)) => a == b,
+            (Num(a), Num(b)) => a == b,
+            (Str(a), Str(b)) => a == b,
+            (Barr(a), Barr(b)) => a == b,
+            (Tuple(a), Tuple(b)) => a == b,
+            (Cntr(a), Cntr(b)) => a == b,
+            (Seq(a), Seq(b)) => a == b,
+            (Map(a), Map(b)) => a == b,
+            _ => false,
+        }
+    }
 }
 
 /// The field name in a container contains invalid characters.
@@ -743,14 +773,14 @@ impl<'a> fmt::Debug for Value<'a> {
             Value::Str(v) => write!(f, "Str({:?})", v),
             Value::Barr(v) => write!(f, "Barr({:?})", v),
             Value::Tuple(v) => {
-                let mut d = f.debug_tuple("");
+                let mut d = f.debug_tuple("Tuple");
                 for i in v {
                     d.field(i);
                 }
                 d.finish()
             }
             Value::Cntr(v) => {
-                let mut d = f.debug_struct("");
+                let mut d = f.debug_struct("Cntr");
                 for (k, v) in v {
                     d.field(k.as_str(), v);
                 }

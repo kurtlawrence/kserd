@@ -21,7 +21,7 @@ fn fmt_unit(buf: &mut String, ident: Option<&str>) {
         if ident.is_empty() {
             buf.push_str("()");
         } else {
-            buf.push_str(ident);
+            write!(buf, "{}()", ident).ok();
         }
     } else {
         buf.push_str("()");
