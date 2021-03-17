@@ -180,6 +180,28 @@ where
 ///  ^"##);
 /// ```
 ///
+/// String primitives are parsed with double quote delimiters, unless the string is prefixed with
+/// `str`. The syntax is `str<char>STRING<char>` where `<char>` is the delimiter.
+///
+/// ```rust
+/// # use kserd::*;
+/// use kserd::parse::parse;
+///
+/// let string = "\"Normal delimiters\"";
+/// let exp = Kserd::new_str("Normal delimiters");
+/// assert_eq!(parse(string), Ok(exp));
+///
+/// let string = r#"str'Quote delimiters to use "double quotes"'"#;
+/// let exp = Kserd::new_str(r#"Quote delimiters to use "double quotes""#);
+/// assert_eq!(parse(string), Ok(exp));
+///
+/// let string = "str😀Any character
+/// can be used as a delimiter😀";
+/// let exp = Kserd::new_str("Any character
+/// can be used as a delimiter");
+/// assert_eq!(parse(string), Ok(exp));
+/// ```
+///
 /// [`Kserd`]: crate::Kserd
 /// [`Error`]: Error
 pub fn parse(s: &str) -> Result<Kserd, Error> {

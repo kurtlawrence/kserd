@@ -10,6 +10,12 @@
 //! For more fine control over a format, [`Formatter`] can be used to individually format `Kserd`
 //! nodes.
 //!
+//! > **String Formatting**
+//! >
+//! > Strings are formatted with the default double quote delimiter unless the string contains the
+//! > double quotes. At that point the formatting tries to use delimiter symbols that are not used
+//! > in the string.
+//!
 //! For each `Kserd` node, a format can exist which displays the _identity_, along with a line
 //! representation of the [`Value`]. There are three line representations, `Inline`, `Concise`, and
 //! `Verbose`. `Inline` and `Concise` representations are delimited, the `Verbose` formatting takes

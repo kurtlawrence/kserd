@@ -5,6 +5,10 @@
 - Fix number parsing, preferring integer parsing (#33)
 - Double float parsing performance for `Number::from_str` using the crate
     [`flast-float`](https://crates.io/crates/fast-float).
+- Rework string primitive parsing such that strings are **literal** between two delimiters.
+  - The `parse` module documentation has examples.
+  - This means multiline strings are supported now and round trip
+  - Fixes some string roundtripping issues, all characters will be deserialised correctly.
 
 # 0.4.0
 - Add `Borrow` trait to `Kstr`
