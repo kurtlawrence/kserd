@@ -9,6 +9,7 @@
   - The `parse` module documentation has examples.
   - This means multiline strings are supported now and round trip
   - Fixes some string roundtripping issues, all characters will be deserialised correctly.
+- Rework parsing, formatting, and encoding of ZSTs and enums to avoid round trip failures
 
 # 0.4.0
 - Add `Borrow` trait to `Kstr`
