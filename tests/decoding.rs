@@ -262,7 +262,7 @@ mod fuzzing {
     }
     impl Fuzz for String {
         fn produce(rng: &mut ThreadRng) -> Self {
-            let take = rng.gen_range(0, 30);
+            let take = rng.gen_range(0..30);
             repeat_with(|| rng.gen::<char>()).take(take).collect()
         }
     }
@@ -345,7 +345,7 @@ mod fuzzing {
                 id_on_seqs: rng.gen(),
                 id_on_maps: rng.gen(),
                 width_limit: if rng.gen() {
-                    Some(rng.gen_range(0, 120))
+                    Some(rng.gen_range(0..120))
                 } else {
                     None
                 },
@@ -406,7 +406,7 @@ mod fuzzing {
     // My structures test
     impl Fuzz for Enum {
         fn produce(rng: &mut ThreadRng) -> Self {
-            match rng.gen_range(0, 5) {
+            match rng.gen_range(0..5) {
                 0 => Enum::One,
                 1 => Enum::Two,
                 2 => Enum::NType(rng.gen()),
@@ -432,14 +432,14 @@ mod fuzzing {
                 n: rng.gen(),
                 f: rng.gen(),
                 s: Fuzz::produce(rng),
-                ns: if rng.gen_range(0, 10) == 0 {
+                ns: if rng.gen_range(0..10) == 0 {
                     Fuzz::produce(rng)
                 } else {
                     None
                 },
                 u: (),
                 un: UnitStruct,
-                rs: if rng.gen_range(0, 10) == 0 {
+                rs: if rng.gen_range(0..10) == 0 {
                     Fuzz::produce(rng)
                 } else {
                     Err(UnitStruct)
@@ -459,13 +459,13 @@ mod fuzzing {
     }
     impl<T: Fuzz> Fuzz for Vec<T> {
         fn produce(rng: &mut ThreadRng) -> Self {
-            let i = if rng.gen() { 0 } else { rng.gen_range(0, 2) };
+            let i = if rng.gen() { 0 } else { rng.gen_range(0..2) };
             repeat_with(|| T::produce(rng)).take(i).collect()
         }
     }
     impl<K: Fuzz + Ord, V: Fuzz> Fuzz for BTreeMap<K, V> {
         fn produce(rng: &mut ThreadRng) -> Self {
-            let i = if rng.gen() { 0 } else { rng.gen_range(0, 2) };
+            let i = if rng.gen() { 0 } else { rng.gen_range(0..2) };
             repeat_with(|| (K::produce(rng), V::produce(rng)))
                 .take(i)
                 .collect()
