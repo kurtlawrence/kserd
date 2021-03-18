@@ -15,12 +15,16 @@ pub enum Nonprim {
 pub(super) fn pattern_match_delimited<'a, E: CxErr<'a>>(
     orig: &'a str,
 ) -> IResult<&'a str, Nonprim, E> {
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Debug)]
     enum Ident {
         Prim,
         Nonprim,
         None,
     };
+
+    if orig.starts_with("true") || orig.starts_with("false") {
+        return Ok((orig, Nonprim::None));
+    }
 
     let (i, ident_) = opt(ident(true))(orig)?;
     let (i, ident_) = if ident_.is_some() {
@@ -129,14 +133,24 @@ mod tests {
         test!(
             Nonprim::None,
             "123456",
+            "123456 [",
             "-123456",
+            "-123456 [",
             "-3.14e-314",
+            "-3.14e-314 [",
             "()",
+            "() [",
             "a = 123",
+            "a = 123 [",
             r#""Hello, world!""#,
+            r#""Hello, world!" ["#,
+            r#"str'Hello, world!'"#,
             "true",
+            "true [",
             "false",
-            "b91':C!WEH#L4R'"
+            "false\n[",
+            "b91':C!WEH#L4R'",
+            "b91':C!WEH#L4R' ["
         );
     }
 

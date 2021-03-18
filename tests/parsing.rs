@@ -109,6 +109,43 @@ mod misc {
         .unwrap();
         do_test!(s, &kserd);
     }
+
+    #[test]
+    fn bug_2() {
+        let s = r#":ScatterPlot
+data = "./zog.csv"
+
+use_gl = false
+
+[[fmts]]
+"foo":
+    colour = "BurlyWood"
+[[fmts]]
+"bar":
+    colour = "DimGray"
+"#;
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![
+                ("data", Kserd::new_str("./zog.csv")),
+                ("use_gl", Kserd::new_bool(false)),
+                (
+                    "fmts",
+                    Kserd::new_map(vec![
+                        (
+                            Kserd::new_str("foo"),
+                            Kserd::new_cntr(vec![("colour", Kserd::new_str("BurlyWood"))]).unwrap()
+                        ),
+                        (
+                            Kserd::new_str("bar"),
+                            Kserd::new_cntr(vec![("colour", Kserd::new_str("DimGray"))]).unwrap()
+                        )
+                    ])
+                )
+            ])
+            .unwrap()
+        );
+    }
 }
 
 mod prims {
@@ -969,6 +1006,19 @@ what the = 101
 #1: at 4:9 :: in name-kserd key value pair
         c
         ^";
+        check_backtrace!(s, ans);
+    }
+
+    #[test]
+    fn bug_poor_error_trace() {
+        let s = r#"imgs = [
+    Image ( src = "" )
+    Image (
+        src = "",
+        title = ""
+    )
+]"#;
+        let ans = r#""#;
         check_backtrace!(s, ans);
     }
 }

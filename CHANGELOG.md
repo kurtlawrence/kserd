@@ -13,6 +13,7 @@
 - Fix roundtripping bugs found by fuzz testing
 - Minor formatting changes
 - Upgrade `nom` to version `6`
+- Various bug fixes
 
 # 0.4.0
 - Add `Borrow` trait to `Kstr`
