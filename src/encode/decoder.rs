@@ -271,9 +271,6 @@ impl<'de> de::EnumAccess<'de> for Decoder<'de> {
             .id()
             .ok_or_else(|| Error::Message(String::from("enum but no identity is present")))?;
 
-        dbg!(&id);
-        dbg!(&self.0);
-
         seed.deserialize(id.into_deserializer())
             .map(|v| (v, Decoder(self.0)))
     }

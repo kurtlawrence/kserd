@@ -47,7 +47,9 @@ pub(super) fn write(
             delim_writer(buf, prefix, suffix, |mut buf| {
                 let rm_trailing = !map.is_empty();
 
-                buf.push(' ');
+                if rm_trailing {
+                    buf.push(' ');
+                }
 
                 for (k, v) in map {
                     buf = write_node(buf, k, fmts, col); // write key
@@ -63,7 +65,10 @@ pub(super) fn write(
                     });
                 }
 
-                buf.push(' ');
+                if rm_trailing {
+                    buf.push(' ');
+                }
+
                 buf
             })
         }
@@ -204,19 +209,16 @@ mod tests {
         // with id
         fmtr.id(0, true).unwrap();
 
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "something {\n}");
+        assert!(fmtr.concise(0).is_err());
+        assert!(fmtr.verbose(0).is_err());
 
         fmtr.inline(0).unwrap(); // inline
-        assert_eq!(&fmtr.write_string(String::new()), "something {  }");
+        assert_eq!(&fmtr.write_string(String::new()), "something {}");
 
         // no id
         fmtr.id(0, false).unwrap();
 
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "{\n}");
-
         fmtr.inline(0).unwrap(); // inline
-        assert_eq!(&fmtr.write_string(String::new()), "{  }");
+        assert_eq!(&fmtr.write_string(String::new()), "{}");
     }
 }

@@ -99,11 +99,10 @@ struct SomeStruct {
     its: Its,
     itsv: Vec<Its>,
     ens: Vec<Enum>,
-    sv: Vec<SomeStruct>,
-    map: BTreeMap<String, SomeStruct>,
+    map: BTreeMap<String, UnitStruct>,
 }
 
-type Its = (Option<Box<SomeStruct>>, i32, f64, String);
+type Its = (Option<Box<String>>, i32, f64, String);
 
 #[test]
 fn structs() {
@@ -120,7 +119,6 @@ fn structs() {
         itsv: vec![],
         map: Default::default(),
         rs: Err(UnitStruct),
-        sv: vec![],
     };
 
     let kserd = Kserd::enc(&s).unwrap();
@@ -144,7 +142,6 @@ fn structs() {
             itsv: vec![],
             map: Default::default(),
             rs: Err(UnitStruct),
-            sv: vec![],
         })),
         u: (),
         un: UnitStruct,
@@ -154,7 +151,6 @@ fn structs() {
         itsv: vec![],
         map: Default::default(),
         rs: Err(UnitStruct),
-        sv: vec![],
     };
 
     let kserd = Kserd::enc(&s).unwrap();
@@ -270,12 +266,6 @@ mod fuzzing {
             repeat_with(|| rng.gen::<char>()).take(take).collect()
         }
     }
-    impl Fuzz for Vec<u8> {
-        fn produce(rng: &mut ThreadRng) -> Self {
-            let take = rng.gen_range(0, 30);
-            repeat_with(|| rng.gen::<u8>()).take(take).collect()
-        }
-    }
 
     const FUZZ_ITERATIONS: u64 = 10_000;
 
@@ -363,6 +353,18 @@ mod fuzzing {
             }
         }
     }
+
+    check_round_trip! { fuzz_rt_unit<()> } // Unit
+    check_round_trip! { fuzz_rt_bool<bool> } // Boolean
+                                             // Numbers
+    check_round_trip! {
+        fuzz_rt_u8<u8>, fuzz_rt_u16<u16>, fuzz_rt_u32<u32>, fuzz_rt_u64<u64>, fuzz_rt_u128<u128>, fuzz_rt_usize<usize>,
+        fuzz_rt_i8<i8>, fuzz_rt_i16<i16>, fuzz_rt_i32<i32>, fuzz_rt_i64<i64>, fuzz_rt_i128<i128>, fuzz_rt_isize<isize>,
+        fuzz_rt_f32<f32>, fuzz_rt_f64<f64>
+    }
+    check_round_trip! { fuzz_rt_string<String>, fuzz_rt_bytes<Vec<u8>> } // Bytes
+
+    // Common sum types
     impl<T: Fuzz> Fuzz for Option<T> {
         fn produce(rng: &mut ThreadRng) -> Self {
             if rng.gen() {
@@ -381,6 +383,9 @@ mod fuzzing {
             }
         }
     }
+    check_round_trip! { fuzz_rt_option<Option<usize>>, fuzz_rt_result<Result<f64, isize>> }
+
+    // Unit structs
     impl Fuzz for UnitStruct {
         fn produce(_: &mut ThreadRng) -> Self {
             Self
@@ -396,20 +401,103 @@ mod fuzzing {
             EmptyStruct2 {}
         }
     }
-
-    check_round_trip! { fuzz_rt_unit<()> } // Unit
-    check_round_trip! { fuzz_rt_bool<bool> } // Boolean
-                                             // Numbers
-    check_round_trip! {
-        fuzz_rt_u8<u8>, fuzz_rt_u16<u16>, fuzz_rt_u32<u32>, fuzz_rt_u64<u64>, fuzz_rt_u128<u128>, fuzz_rt_usize<usize>,
-        fuzz_rt_i8<i8>, fuzz_rt_i16<i16>, fuzz_rt_i32<i32>, fuzz_rt_i64<i64>, fuzz_rt_i128<i128>, fuzz_rt_isize<isize>,
-        fuzz_rt_f32<f32>, fuzz_rt_f64<f64>
-    }
-    check_round_trip! { fuzz_rt_string<String>, fuzz_rt_bytes<Vec<u8>> } // Bytes
-                                                                         // Common sum types
-    check_round_trip! { fuzz_rt_option<Option<usize>>, fuzz_rt_result<Result<f64, isize>> }
-    // Unit structs
     check_round_trip! { fuzz_rt_unit_struct<UnitStruct>, fuzz_rt_empty_struct<EmptyStruct>, fuzz_rt_empty_struct2<EmptyStruct2> }
+
+    // My structures test
+    impl Fuzz for Enum {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            match rng.gen_range(0, 5) {
+                0 => Enum::One,
+                1 => Enum::Two,
+                2 => Enum::NType(rng.gen()),
+                3 => Enum::Tuple(rng.gen(), rng.gen(), rng.gen()),
+                4 => Enum::Struct {
+                    a: rng.gen(),
+                    b: String::produce(rng),
+                    c: rng.gen(),
+                },
+                _ => unreachable!(),
+            }
+        }
+    }
+    impl<T: Fuzz> Fuzz for Box<T> {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            Box::new(T::produce(rng))
+        }
+    }
+    impl Fuzz for SomeStruct {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            // handle the nesting structures manually to avoid massively nested items
+            Self {
+                n: rng.gen(),
+                f: rng.gen(),
+                s: Fuzz::produce(rng),
+                ns: if rng.gen_range(0, 10) == 0 {
+                    Fuzz::produce(rng)
+                } else {
+                    None
+                },
+                u: (),
+                un: UnitStruct,
+                rs: if rng.gen_range(0, 10) == 0 {
+                    Fuzz::produce(rng)
+                } else {
+                    Err(UnitStruct)
+                },
+                en: Fuzz::produce(rng),
+                its: Fuzz::produce(rng),
+                itsv: Fuzz::produce(rng),
+                ens: Fuzz::produce(rng),
+                map: Fuzz::produce(rng),
+            }
+        }
+    }
+    impl Fuzz for Its {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            (Fuzz::produce(rng), rng.gen(), rng.gen(), Fuzz::produce(rng))
+        }
+    }
+    impl<T: Fuzz> Fuzz for Vec<T> {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            let i = if rng.gen() { 0 } else { rng.gen_range(0, 2) };
+            repeat_with(|| T::produce(rng)).take(i).collect()
+        }
+    }
+    impl<K: Fuzz + Ord, V: Fuzz> Fuzz for BTreeMap<K, V> {
+        fn produce(rng: &mut ThreadRng) -> Self {
+            let i = if rng.gen() { 0 } else { rng.gen_range(0, 2) };
+            repeat_with(|| (K::produce(rng), V::produce(rng)))
+                .take(i)
+                .collect()
+        }
+    }
+
+    check_round_trip! { fuzz_rt_enum<Enum>, fuzz_rt_tuple<Its> }
+
+    #[test]
+    fn fuzz_rt_some_struct() {
+        std::thread::Builder::new()
+            .name("some struct fuzzing".to_string())
+            .stack_size(1024 * 1024 * 100)
+            .spawn(|| {
+                let mut rng = rand::thread_rng();
+                for _ in 0..FUZZ_ITERATIONS {
+                    if let Err((e, t, f)) = check_round_trip::<SomeStruct>(&mut rng) {
+                        println!(
+                            "---- Failure checking round trip for type `{}`",
+                            "SomeStruct"
+                        );
+                        println!("---- Error message: {}", e);
+                        println!("---- Value that failed:\n{:#?}", t);
+                        println!("---- FormattingConfig:\n{:#?}", f);
+                        panic!("Failure checking round trip for type `{}`", "SomeStruct");
+                    }
+                }
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+    }
 }
 
 #[test]
@@ -459,4 +547,48 @@ fn empty_struct2_decode_test() {
     println!("Parsed: {:?}", y);
     let y = y.decode::<EmptyStruct2>().unwrap();
     assert_eq!(EmptyStruct2 {}, y);
+}
+
+#[test]
+fn some_struct_decode_test_1() {
+    let s = SomeStruct {
+            n: -1534911249,
+                f: 0.3503985440975186,
+                    s: "\u{878b0}\u{eeddb}\u{5dd09}\u{f7a12}씝\u{ccacc}\u{a6a4f}\u{bc0f7}\u{7cf22}\u{70e10}\u{108360}\u{d70bf}\u{75aff}\u{42be3}\u{b2851}\u{1026ea}\u{a1d0c}\u{470f4}\u{50ebe}\u{69fad}\u{87c60}\u{62eed}\u{1487c}\u{77e4d}\u{39624}\u{f09b0}".to_string(),
+                        ns: None,
+                            u: (),
+                                un: UnitStruct,
+                                    rs: Err(
+                                                UnitStruct,
+                                                    ),
+                                                        en: Enum::Tuple(
+                                                                    213,
+                                                                            -15278,
+                                                                                    0.5143220283660902,
+                                                                                        ),
+                                                                                            its: (
+                                                                                                        None,
+                                                                                                                -1039545731,
+                                                                                                                        0.9572395051775555,
+                                                                                                                                "".to_string(),
+                                                                                                                                    ),
+                                                                                                                                        itsv: vec![],
+                                                                                                                                            ens: vec![
+                                                                                                                                                        Enum::Two,
+                                                                                                                                                            ],
+                                                                                                                                                                map: Default::default(),
+    };
+
+    let y = Kserd::enc(&s).unwrap();
+    let y = y.as_str_with_config(kserd::fmt::FormattingConfig {
+        id_on_primitives: true,
+        id_on_maps: true,
+        width_limit: Some(0),
+        ..Default::default()
+    });
+    println!("Serialized: {}", y);
+    let y = kserd::parse::parse(&y).unwrap();
+    println!("Parsed: {:?}", y);
+    let y = y.decode::<SomeStruct>().unwrap();
+    assert_eq!(s, y);
 }

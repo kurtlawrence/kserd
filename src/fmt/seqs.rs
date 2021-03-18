@@ -147,17 +147,14 @@ mod tests {
         // with id
         fmtr.id(0, true).unwrap();
 
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "something [\n]");
+        assert!(fmtr.concise(0).is_err());
+        assert!(fmtr.verbose(0).is_err());
 
         fmtr.inline(0).unwrap(); // inline
         assert_eq!(&fmtr.write_string(String::new()), "something []");
 
         // no id
         fmtr.id(0, false).unwrap();
-
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "[\n]");
 
         fmtr.inline(0).unwrap(); // inline
         assert_eq!(&fmtr.write_string(String::new()), "[]");

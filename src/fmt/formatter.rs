@@ -366,6 +366,10 @@ fn max_line_repr(nv: &NodeValue) -> Repr {
     use NodeValue::*;
     match nv {
         Primitive => Repr::Inline, // primitives are always inline
+        Tuple(x) if x.is_empty() => Repr::Inline, // empty tuples are best represented inline
+        Seq(x) if x.is_empty() => Repr::Inline, // empty seqs are best represented inline
+        Map(x) if x.is_empty() => Repr::Inline, // empty maps are best represented inline
+        Cntr(x) if x.is_empty() => Repr::Inline, // empty cntrs are best represented inline
         Tuple(_) => Repr::Concise, // tuples can be at most concise
         _ => Repr::Verbose,        // everything else can be from verbose
     }
@@ -530,16 +534,16 @@ mod tests {
         assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Inline]);
 
         let kserd = Kserd::new(Value::Tuple(vec![]));
-        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Concise]);
+        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Inline]);
 
         let kserd = Kserd::new_cntr(Vec::<(String, _)>::new()).unwrap();
-        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Verbose]);
+        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Inline]);
 
         let kserd = Kserd::new(Value::Seq(vec![]));
-        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Concise]);
+        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Inline]);
 
         let kserd = Kserd::new_map(vec![]);
-        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Concise]);
+        assert_eq!(&lines(&Formatter::new(&kserd).fmts), &[Inline]);
 
         let kserd = Kserd::new(Value::Tuple(vec![
             Kserd::new_cntr(Vec::<(String, _)>::new()).unwrap(),
@@ -548,7 +552,7 @@ mod tests {
         ]));
         assert_eq!(
             &lines(&Formatter::new(&kserd).fmts),
-            &[Concise, Concise, Concise, Concise]
+            &[Concise, Inline, Inline, Inline]
         );
     }
 

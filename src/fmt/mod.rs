@@ -259,7 +259,7 @@ pub struct FormattingConfig {
     ///
     /// assert_eq!(
     ///     &kserd.as_str_with_config(show_tuples),
-    ///     "a-tuple ()"
+    ///     "a-tuple()"
     /// );
     /// ```
     pub id_on_tuples: bool,
@@ -327,7 +327,7 @@ pub struct FormattingConfig {
     ///
     /// assert_eq!(
     ///     &kserd.as_str_with_config(show_maps),
-    ///     "a-map {  }"
+    ///     "a-map {}"
     /// );
     /// ```
     pub id_on_maps: bool,

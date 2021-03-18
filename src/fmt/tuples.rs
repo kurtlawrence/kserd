@@ -7,6 +7,9 @@ pub(super) fn write(buf: String, node: Node, fmts: &[Fmt], col: usize, seq: SeqI
 
     let prefix = |mut buf| {
         maybe_write_nonprim_ident(&mut buf, fmt.id, id);
+        if id.is_some() {
+            buf.pop();
+        }
         buf.push('(');
         buf
     };
@@ -77,7 +80,7 @@ mod tests {
 
         let s = kserd.as_str_with_config(config);
         println!("{}", s);
-        assert_eq!(&s, "hello (<i32> 100, <i32> -101, <f64> 3.14)");
+        assert_eq!(&s, "hello(<i32> 100, <i32> -101, <f64> 3.14)");
 
         config.width_limit = Some(0);
 
@@ -85,7 +88,7 @@ mod tests {
         println!("{}", s);
         assert_eq!(
             &s,
-            "hello (
+            "hello(
     <i32> 100
     <i32> -101
     <f64> 3.14
@@ -102,17 +105,14 @@ mod tests {
         // with id
         fmtr.id(0, true).unwrap();
 
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "a-tuple (\n)");
+        assert!(fmtr.verbose(0).is_err());
+        assert!(fmtr.concise(0).is_err());
 
         fmtr.inline(0).unwrap(); // inline
-        assert_eq!(&fmtr.write_string(String::new()), "a-tuple ()");
+        assert_eq!(&fmtr.write_string(String::new()), "a-tuple()");
 
         // no id
         fmtr.id(0, false).unwrap();
-
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "(\n)");
 
         fmtr.inline(0).unwrap(); // inline
         assert_eq!(&fmtr.write_string(String::new()), "()");
