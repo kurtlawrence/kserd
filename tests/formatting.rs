@@ -411,22 +411,18 @@ b = (
     println!("{}", s);
     assert_eq!(
         &s,
-        r#":Seq
-
+        r#"
 [[inner]]
-    :Simple
     a = 100
     b = (0, 1)
     c = [2, 3]
 
 [[inner]]
-    :Simple
     a = 101
     b = (1, 2)
     c = [4, 5]
 
 [[inner]]
-    :Simple
     a = 103
     b = (2, 3)
     c = [6, 7]
@@ -541,8 +537,7 @@ fn fmt_map() {
     println!("*** CONCISE - 35 width ***\n{}", s);
     assert_eq!(
         &s,
-        r#":SimpleMap
-mapping = {
+        r#"mapping = {
               (1, 2): (
                           a = 100
                           b = (0, 1)

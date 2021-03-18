@@ -5,6 +5,7 @@ pub(super) fn write(
     node: Node,
     fmts: &[Fmt],
     col: usize,
+    inline_field_id: bool,
     map: NamedIter,
 ) -> String {
     let fmt = fmts.get(node.index()).unwrap();
@@ -23,11 +24,7 @@ pub(super) fn write(
 
     let write_node_with_field_mapping = |mut buf: String, name, value, col| {
         let buf_lo = buf.len();
-
-        buf.push_str(name);
-        buf.push_str(FIELDS_ASSIGNER);
-        buf.push(' ');
-
+        write!(buf, "{}{} ", name, FIELDS_ASSIGNER).ok();
         let buf_hi = buf.len();
 
         // offset the column to the end of the name, makes things neater
@@ -46,9 +43,7 @@ pub(super) fn write(
                 let rm_trailing = !map.is_empty();
 
                 for (name, v) in map {
-                    buf.push_str(name);
-                    buf.push_str(FIELDS_ASSIGNER);
-                    buf.push(' ');
+                    write!(buf, "{}{} ", name, FIELDS_ASSIGNER).ok();
                     buf = write_node(buf, v, fmts, col); // write value
                     buf.push_str(FIELDS_SEPARATOR);
                 }
@@ -76,11 +71,13 @@ pub(super) fn write(
         }),
         Repr::Verbose => {
             // Names for containers follow :<id>
-            if let Some(id) = id {
-                write_indent(&mut buf, col);
-                buf.push(':');
-                buf.push_str(id);
-                buf.push('\n');
+            if fmt.id && inline_field_id {
+                if let Some(id) = id {
+                    write_indent(&mut buf, col);
+                    buf.push(':');
+                    buf.push_str(id);
+                    buf.push('\n');
+                }
             }
 
             for (name, v) in map {
@@ -94,14 +91,21 @@ pub(super) fn write(
 
                 buf = match (vrepr, val) {
                     (Repr::Verbose, NodeValue::Cntr(map)) => {
-                        // write the [field_name] then the map below
+                        // write the [field_name:<id>] then the cntr below
                         buf.push('\n');
                         write_indent(&mut buf, col);
                         buf.push('[');
                         buf.push_str(name);
+                        // careful, need to refer to the _field's_ node
+                        if vfmt.id {
+                            if let Some(id) = v.kserd().id() {
+                                buf.push(':');
+                                buf.push_str(id);
+                            }
+                        }
                         buf.push_str("]\n");
                         // notice the added INDENT!!! cntr's indent children
-                        cntr::write(buf, v, fmts, col + INDENT, map)
+                        cntr::write(buf, v, fmts, col + INDENT, false, map)
                     }
                     (Repr::Verbose, NodeValue::Seq(seq)) => {
                         buf.push('\n');

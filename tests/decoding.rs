@@ -592,3 +592,51 @@ fn some_struct_decode_test_1() {
     let y = y.decode::<SomeStruct>().unwrap();
     assert_eq!(s, y);
 }
+
+#[test]
+fn some_struct_decode_test_2() {
+    let s = SomeStruct {
+    n: 1785306414,
+    f: 0.9600825275211862,
+    s: "\u{d2a3c}\u{c36d9}\u{56c77}紐\u{e15c}\u{f8a54}\u{572ce}\u{10727c}\u{d606c}\u{105a35}\u{3296f}".to_string(),
+    ns: None,
+    u: (),
+    un: UnitStruct,
+    rs: Err(
+        UnitStruct,
+    ),
+    en: Enum::NType(
+        30,
+    ),
+    its: (
+        None,
+        2101028762,
+        0.8603156654015199,
+        "".to_string(),
+    ),
+    itsv: vec![],
+    ens: vec![
+        Enum::Struct {
+            a: 187,
+            b: "\u{b57a6}\u{f7003}\u{78529}\u{d2a11}\u{3fff9}\u{e486f}\u{3c103}\u{98d3c}\u{42bbe}\u{10cc5f}".to_string(),
+            c: 0.5815612461032534,
+        },
+    ],
+    map: vec![(
+        "\u{2f520}\u{b1cc9}\u{50f64}\u{f3c5c}\u{f7fb8}\u{c4f59}\u{d55cf}\u{72e88}\u{3ea1a}\u{dbeaa}\u{d6f0b}\u{d2107}\u{10bd17}𰷧\u{5c5a5}".to_string(), UnitStruct)].into_iter().collect(),
+};
+
+    let y = Kserd::enc(&s).unwrap();
+    let y = y.as_str_with_config(kserd::fmt::FormattingConfig {
+        id_on_primitives: true,
+        id_on_maps: true,
+        id_on_seqs: true,
+        width_limit: Some(77),
+        ..Default::default()
+    });
+    println!("Serialized: {}", y);
+    let y = kserd::parse::parse(&y).unwrap();
+    println!("Parsed: {:?}", y);
+    let y = y.decode::<SomeStruct>().unwrap();
+    assert_eq!(s, y);
+}

@@ -94,8 +94,7 @@
 //!     name = "rand"
 //!     version = "0.5"
 //!
-//! [package]
-//!     :Package
+//! [package:Package]
 //!     name = "a-crate"
 //!     version = "0.1.0"
 //! "#
@@ -143,7 +142,7 @@
 //! [`Value`]: crate::Value
 use super::*;
 use nav::*;
-use std::fmt::{self as stdfmt, Debug, Display};
+use std::fmt::{self as stdfmt, Debug, Display, Write as _};
 
 mod cntr;
 mod formatter;
@@ -488,7 +487,7 @@ fn write_node(buf: String, node: Node, fmts: &[Fmt], col: usize) -> String {
     match node.value() {
         NodeValue::Primitive => prims::write(buf, node.kserd(), fmts.get(node.index()).unwrap().id),
         NodeValue::Tuple(seq) => tuples::write(buf, node, fmts, col, seq),
-        NodeValue::Cntr(map) => cntr::write(buf, node, fmts, col, map),
+        NodeValue::Cntr(map) => cntr::write(buf, node, fmts, col, true, map),
         NodeValue::Seq(seq) => seqs::write(buf, node, fmts, col, seq, None),
         NodeValue::Map(map) => maps::write(buf, node, fmts, col, map, None),
     }
@@ -578,8 +577,7 @@ mod tests {
     name = "rand"
     version = "0.5"
 
-[package]
-    :Package
+[package:Package]
     name = "a-crate"
     version = "0.1.0"
 "#
