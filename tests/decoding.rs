@@ -81,7 +81,6 @@ fn tuples() {
 
     let t = TupleStruct(1, "hello", -PI32);
     let kserd = Kserd::enc(&t).unwrap();
-    dbg!(&kserd);
     let r = kserd.mk_brw().decode::<TupleStruct>();
     assert_eq!(r, Ok(t));
 }
@@ -182,7 +181,6 @@ fn unit_enum() {
 fn newtype_enum_variant() {
     let e = Enum::NType(120);
     let kserd = Kserd::enc(&e).unwrap();
-    dbg!(&kserd);
     println!("{}", kserd.as_str());
     let r = kserd.decode::<Enum>();
     assert_eq!(r, Ok(e));
@@ -192,7 +190,6 @@ fn newtype_enum_variant() {
 fn tuple_enum_variant() {
     let e = Enum::Tuple(120, -100, PI64);
     let kserd = Kserd::enc(&e).unwrap();
-    dbg!(&kserd);
     println!("{}", kserd.as_str());
     let r = kserd.decode::<Enum>();
     assert_eq!(r, Ok(e));
@@ -206,7 +203,6 @@ fn struct_enum_variant() {
         c: -PI64,
     };
     let kserd = Kserd::enc(&e).unwrap();
-    dbg!(&kserd);
     println!("{}", kserd.as_str());
     let r = kserd.decode::<Enum>();
     assert_eq!(r, Ok(e));

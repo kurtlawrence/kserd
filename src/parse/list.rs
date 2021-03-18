@@ -18,10 +18,10 @@ fn inline_list_kserds<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Vec<Kser
 fn concise_list_kserds<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Vec<Kserd<'a>>, E> {
     preceded(
         multiline_whitespace,
-        terminated(
+        cut(terminated(
             separated_list0(multiline_whitespace, kserd_concise),
             multiline_whitespace,
-        ),
+        )),
     )(i)
 }
 

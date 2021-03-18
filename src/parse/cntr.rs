@@ -39,10 +39,10 @@ fn concise_cntr_kserds<'a, E: CxErr<'a>>(
         "newline separated (concise) kserdstr-kserd pair",
         preceded(
             multiline_whitespace,
-            terminated(
+            cut(terminated(
                 separated_list0(multiline_whitespace, kvp_kserdstr_to_kserd(false)),
                 multiline_whitespace,
-            ),
+            )),
         ),
     )(i)
 }

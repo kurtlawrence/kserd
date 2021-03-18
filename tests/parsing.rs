@@ -65,8 +65,6 @@ mod misc {
             &Kserd::new_cntr(vec![("a", Kserd::new_num(101)), ("b", Kserd::new_num(202))]).unwrap()
         );
 
-        dbg!("here");
-
         let s = "[[list]]
 \"Hello, world!\"
 
@@ -1018,7 +1016,25 @@ what the = 101
         title = ""
     )
 ]"#;
-        let ans = r#""#;
+        let ans = r#"#0: at 4:17 :: in SeparatedList
+        src = "",
+                ^
+
+#1: at 3:12 :: in newline separated (concise) kserdstr-kserd pair
+    Image (
+           ^
+
+#2: at 3:12 :: in concise container
+    Image (
+           ^
+
+#3: at 1:9 :: in multi-line (concise) sequence
+imgs = [
+        ^
+
+#4: at 1:1 :: in name-kserd key value pair
+imgs = [
+^"#;
         check_backtrace!(s, ans);
     }
 }

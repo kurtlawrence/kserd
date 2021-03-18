@@ -726,9 +726,7 @@ mod tests {
             ( $( $n:expr ),+ ) => {{
                 $(
                     let n = $n; // eval expr (so rand is eval once!)
-                    dbg!(n);
                     let s: String = n.to_string();
-                    dbg!(&s);
                     let n = Number::from(n);
                     assert_eq!(Number::from_str(&s), Ok(n));
                 )+
