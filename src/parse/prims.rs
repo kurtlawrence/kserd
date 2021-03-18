@@ -1,13 +1,13 @@
 use super::*;
 
-fn from_str<'a, T: FromStr, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, T, E> {
+fn from_str<'a, T: FromStr, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, T, E> {
     i.parse::<T>()
         .map(|x| ("", x))
         .map_err(|_| Err::Error(error::make_error(i, ErrorKind::ParseTo)))
 }
 
 /// A unit value (`()`). Note can have inline whitespace.
-pub fn unit_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, (), E> {
+pub(super) fn unit_value<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, (), E> {
     context(
         "unit value",
         map(
@@ -17,14 +17,14 @@ pub fn unit_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, ()
     )(i)
 }
 
-fn boolean<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, bool, E> {
+fn boolean<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, bool, E> {
     context(
         "boolean",
         alt((map(tag("true"), |_| true), map(tag("false"), |_| false))),
     )(i)
 }
 
-fn num<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Number, E> {
+fn num<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Number, E> {
     const ALLOW: &str = "-.einfNa";
     context(
         "number",
@@ -35,9 +35,9 @@ fn num<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Number, E> {
     )(i)
 }
 
-fn parse_str<'a, E: ParseError<&'a str>>(
+fn parse_str<'a, E: CxErr<'a>>(
     delimiter: char,
-) -> impl Fn(&'a str) -> IResult<&'a str, Kstr<'a>, E> {
+) -> impl FnMut(&'a str) -> IResult<&'a str, Kstr<'a>, E> {
     preceded(
         char(delimiter),
         cut(terminated(
@@ -47,7 +47,7 @@ fn parse_str<'a, E: ParseError<&'a str>>(
     )
 }
 
-fn string<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
+fn string<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
     let (d, i) = if let Some(suff) = i.strip_prefix("str") {
         (suff.chars().next().unwrap_or('"'), suff)
     } else {
@@ -56,7 +56,7 @@ fn string<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, 
     context("string", parse_str(d))(i)
 }
 
-fn barr<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E> {
+fn barr<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E> {
     context(
         "base 91 byte array",
         preceded(
@@ -71,7 +71,7 @@ fn barr<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E>
     )(i)
 }
 
-fn prim_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Value<'a>, E> {
+fn prim_value<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Value<'a>, E> {
     context(
         "primitive value",
         alt((
@@ -86,7 +86,7 @@ fn prim_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Value<
 
 /// A primitive is always formatted the same way; inline with optional `<ident>` out
 /// the front. The value can also have _inline_ whitespace in-between the ident.
-pub fn prim<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
+pub(super) fn prim<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
     let (i, (ident, value)) = context(
         "primitive",
         separated_pair(opt(ident(true)), inline_whitespace, prim_value),

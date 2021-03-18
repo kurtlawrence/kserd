@@ -16,9 +16,8 @@ use nom::{
     bytes::complete::{tag, take_till, take_while, take_while1},
     character::complete::{alpha1, char, line_ending},
     combinator::{all_consuming, cut, map, map_parser, opt},
-    error::VerboseErrorKind,
-    error::{self, context, ErrorKind, ParseError},
-    multi::{many0, separated_list},
+    error::{self, context, ErrorKind, VerboseErrorKind},
+    multi::{many0, separated_list0},
     sequence::{preceded, separated_pair, terminated},
     Err, IResult,
 };
@@ -26,6 +25,10 @@ use prims::*;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use wsp::*;
+
+trait CxErr<'a>: error::ParseError<&'a str> + error::ContextError<&'a str> {}
+impl<'a> CxErr<'a> for () {}
+impl<'a> CxErr<'a> for error::VerboseError<&'a str> {}
 
 /// A hierarchy of errors which provide a trace of where the error originates.
 ///
@@ -62,7 +65,7 @@ fn kserd_ctor<'a>(ident: Option<Kstr<'a>>, value: Value<'a>) -> Kserd<'a> {
     }
 }
 
-fn kserd_delimited<'a, E: ParseError<&'a str>>(
+fn kserd_delimited<'a, E: CxErr<'a>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
@@ -78,15 +81,15 @@ fn kserd_delimited<'a, E: ParseError<&'a str>>(
     }
 }
 
-fn kserd_inline<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
+fn kserd_inline<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
     kserd_delimited(true)(i)
 }
 
-fn kserd_concise<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
+fn kserd_concise<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
     kserd_delimited(false)(i)
 }
 
-fn kserd_nested<'a, E: ParseError<&'a str>>(
+fn kserd_nested<'a, E: CxErr<'a>>(
     indents: usize,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
@@ -100,7 +103,7 @@ fn kserd_nested<'a, E: ParseError<&'a str>>(
     }
 }
 
-fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
+fn kserd_root<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
     if i.is_empty() {
         context("empty input", |i| {
             Err(Err::Error(error::make_error(i, ErrorKind::Eof)))
@@ -111,7 +114,7 @@ fn kserd_root<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<
 }
 
 /// Turn a failure error back into a regular error.
-fn uncut<'a, E: ParseError<&'a str>, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, O, E>
+fn uncut<'a, E: CxErr<'a>, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, O, E>
 where
     F: Fn(&'a str) -> IResult<&'a str, O, E>,
 {

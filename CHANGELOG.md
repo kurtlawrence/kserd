@@ -10,6 +10,9 @@
   - This means multiline strings are supported now and round trip
   - Fixes some string roundtripping issues, all characters will be deserialised correctly.
 - Rework parsing, formatting, and encoding of ZSTs and enums to avoid round trip failures
+- Fix roundtripping bugs found by fuzz testing
+- Minor formatting changes
+- Upgrade `nom` to version `6`
 
 # 0.4.0
 - Add `Borrow` trait to `Kstr`

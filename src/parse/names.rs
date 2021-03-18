@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn valid_name<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
+pub(super) fn valid_name<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
     alt((alpha1, tag("_")))(i)?; // can only start with a (ASCII) letter or underscore
 
     context(
@@ -17,7 +17,7 @@ pub fn valid_name<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Ks
 /// Parses an identity.
 ///
 /// Specify if angle brackets delimiting it are required (will `Fail` if they do and they don't exist).
-pub fn ident<'a, E: ParseError<&'a str>>(
+pub(super) fn ident<'a, E: CxErr<'a>>(
     req_angles: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kstr<'a>, E> {
     move |i: &'a str| {
@@ -32,7 +32,7 @@ pub fn ident<'a, E: ParseError<&'a str>>(
     }
 }
 
-pub fn field_name<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
+pub(super) fn field_name<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
     map(
         take_while(|c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_'),
         Kstr::brwed,

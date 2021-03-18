@@ -1,9 +1,9 @@
 use super::*;
 
 /// Key-Value pair, of `Kstr` to `Kserd`.
-fn kvp_kserdstr_to_kserd<'a, E: ParseError<&'a str>>(
+fn kvp_kserdstr_to_kserd<'a, E: CxErr<'a>>(
     force_inline: bool,
-) -> impl Fn(&'a str) -> IResult<&'a str, (Kstr<'a>, Kserd<'a>), E> {
+) -> impl FnMut(&'a str) -> IResult<&'a str, (Kstr<'a>, Kserd<'a>), E> {
     context(
         "name-kserd key value pair",
         separated_pair(
@@ -19,12 +19,12 @@ fn kvp_kserdstr_to_kserd<'a, E: ParseError<&'a str>>(
 }
 
 /// Comma separated key-value pairs, where key is `Kstr` and value are `Kserd`.
-fn inline_cntr_kserds<'a, E: ParseError<&'a str>>(
+fn inline_cntr_kserds<'a, E: CxErr<'a>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<(Kstr<'a>, Kserd<'a>)>, E> {
     context(
         "comma separated kserdstr-kserd pair",
-        separated_list(
+        separated_list0(
             ignore_inline_whitespace(char(',')),
             ignore_inline_whitespace(kvp_kserdstr_to_kserd(true)),
         ),
@@ -32,7 +32,7 @@ fn inline_cntr_kserds<'a, E: ParseError<&'a str>>(
 }
 
 /// Concise maps are separated by new lines.
-fn concise_cntr_kserds<'a, E: ParseError<&'a str>>(
+fn concise_cntr_kserds<'a, E: CxErr<'a>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<(Kstr<'a>, Kserd<'a>)>, E> {
     context(
@@ -40,14 +40,14 @@ fn concise_cntr_kserds<'a, E: ParseError<&'a str>>(
         preceded(
             multiline_whitespace,
             terminated(
-                separated_list(multiline_whitespace, kvp_kserdstr_to_kserd(false)),
+                separated_list0(multiline_whitespace, kvp_kserdstr_to_kserd(false)),
                 multiline_whitespace,
             ),
         ),
     )(i)
 }
 
-pub fn delimited<'a, E: ParseError<&'a str>>(
+pub(super) fn delimited<'a, E: CxErr<'a>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     use std::iter::FromIterator;
@@ -95,7 +95,7 @@ pub fn delimited<'a, E: ParseError<&'a str>>(
 ///
 /// `indents` is in number of _indents_ that is expected to be inside _this_ Container.
 /// An _indent_ is 4 consectutive spaces, or a single tab character.
-pub fn verbose<'a, E: ParseError<&'a str>>(
+pub(super) fn verbose<'a, E: CxErr<'a>>(
     indents: usize,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
@@ -178,7 +178,7 @@ enum ContainerField<'a> {
     },
 }
 
-fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
+fn verbose_cntr_field<'a, E: CxErr<'a>>(
     indents: usize,
 ) -> impl Fn(&'a str) -> IResult<&'a str, ContainerField<'a>, E> {
     move |i: &'a str| {
@@ -288,9 +288,7 @@ fn verbose_cntr_field<'a, E: ParseError<&'a str>>(
     }
 }
 
-fn expect_indents<'a, E: ParseError<&'a str>>(
-    indents: usize,
-) -> impl Fn(&'a str) -> IResult<&'a str, (), E> {
+fn expect_indents<'a, E: CxErr<'a>>(indents: usize) -> impl Fn(&'a str) -> IResult<&'a str, (), E> {
     move |i: &'a str| {
         let mut r = i;
 
@@ -305,7 +303,7 @@ fn expect_indents<'a, E: ParseError<&'a str>>(
 
 /// Ignores all whitespace around name and identity. Field name _must_ exist, and if there is a
 /// separator (`:`) then the identity _must_ exist as well.
-fn verbose_field_name_and_identity<'a, E: ParseError<&'a str>>(
+fn verbose_field_name_and_identity<'a, E: CxErr<'a>>(
     i: &'a str,
 ) -> IResult<&'a str, (Kstr<'a>, Option<Kstr<'a>>), E> {
     context("verbose container field name", |i| {

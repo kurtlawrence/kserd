@@ -1,11 +1,9 @@
 use super::*;
 
-fn inline_list_kserds<'a, E: ParseError<&'a str>>(
-    i: &'a str,
-) -> IResult<&'a str, Vec<Kserd<'a>>, E> {
+fn inline_list_kserds<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Vec<Kserd<'a>>, E> {
     context(
         "comma separated kserds",
-        separated_list(
+        separated_list0(
             ignore_inline_whitespace(char(',')),
             ignore_inline_whitespace(kserd_inline),
         ),
@@ -17,13 +15,11 @@ fn inline_list_kserds<'a, E: ParseError<&'a str>>(
 /// The way to control for this is to allow whitespace all around the items.
 ///
 /// TODO: Show one of the tuple examples.
-fn concise_list_kserds<'a, E: ParseError<&'a str>>(
-    i: &'a str,
-) -> IResult<&'a str, Vec<Kserd<'a>>, E> {
+fn concise_list_kserds<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Vec<Kserd<'a>>, E> {
     preceded(
         multiline_whitespace,
         terminated(
-            separated_list(multiline_whitespace, kserd_concise),
+            separated_list0(multiline_whitespace, kserd_concise),
             multiline_whitespace,
         ),
     )(i)
@@ -32,7 +28,7 @@ fn concise_list_kserds<'a, E: ParseError<&'a str>>(
 /// Parse as a tuple. Will `Fail` if delimited by opening paren `(`.
 /// Tries to determine if the stream is in `Concise` or `Inline` format using
 /// simple heuristics. The decision can be overridden by forcing `Inline` format.
-pub fn tuple<'a, E: ParseError<&'a str>>(
+pub(super) fn tuple<'a, E: CxErr<'a>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
@@ -69,7 +65,7 @@ pub fn tuple<'a, E: ParseError<&'a str>>(
 /// Parse as a sequence. Will `Fail` if delimited by opening bracket `[`.
 /// Tries to determine if the stream is in `Concise` or `Inline` format using
 /// simple heuristics. The decision can be overridden by forcing `Inline` format.
-pub fn seq_delimited<'a, E: ParseError<&'a str>>(
+pub(super) fn seq_delimited<'a, E: CxErr<'a>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {
