@@ -513,7 +513,10 @@ mod containers {
                                             vec![
                                                 ("a_number", Kserd::new_num(3.0)),
                                                 ("a_string", Kserd::new_str("Hello,")),
-                                                ("inner_test_items", Kserd::new(Value::Seq(vec![]))),
+                                                (
+                                                    "inner_test_items",
+                                                    Kserd::new(Value::Seq(vec![])),
+                                                ),
                                             ]
                                             .into_iter()
                                             .map(|(k, v)| (k.into(), v))
@@ -531,7 +534,10 @@ mod containers {
                                             vec![
                                                 ("a_number", Kserd::new_num(0.14)),
                                                 ("a_string", Kserd::new_str("world!")),
-                                                ("inner_test_items", Kserd::new(Value::Seq(vec![]))),
+                                                (
+                                                    "inner_test_items",
+                                                    Kserd::new(Value::Seq(vec![])),
+                                                ),
                                             ]
                                             .into_iter()
                                             .map(|(k, v)| (k.into(), v))
