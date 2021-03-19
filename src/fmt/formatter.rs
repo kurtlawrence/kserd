@@ -365,13 +365,14 @@ impl<'a, 'k> Deref for Formatter<'a, 'k> {
 fn max_line_repr(nv: &NodeValue) -> Repr {
     use NodeValue::*;
     match nv {
-        Primitive => Repr::Inline,                // primitives are always inline
-        Tuple(x) if x.is_empty() => Repr::Inline, // empty tuples are best represented inline
-        Seq(x) if x.is_empty() => Repr::Inline,   // empty seqs are best represented inline
-        Map(x) if x.is_empty() => Repr::Inline,   // empty maps are best represented inline
-        Cntr(x) if x.is_empty() => Repr::Inline,  // empty cntrs are best represented inline
-        Tuple(_) => Repr::Concise,                // tuples can be at most concise
-        _ => Repr::Verbose,                       // everything else can be from verbose
+        Primitive => Repr::Inline, // primitives are always inline
+        // Empty tuples, seq, map, cntrs should be inlined
+        Tuple(x) if x.is_empty() => Repr::Inline,
+        Seq(x) if x.is_empty() => Repr::Inline,
+        Map(x) if x.is_empty() => Repr::Inline,
+        Cntr(x) if x.is_empty() => Repr::Inline,
+        Tuple(_) => Repr::Concise, // tuples can be at most concise
+        _ => Repr::Verbose,        // everything else can be from verbose
     }
 }
 

@@ -42,8 +42,8 @@ pub(super) fn write(
         buf
     };
 
-    match fmt.line {
-        Repr::Inline => {
+    match (fmt.line, field_name) {
+        (Repr::Inline, _) => {
             delim_writer(buf, prefix, suffix, |mut buf| {
                 let rm_trailing = !map.is_empty();
 
@@ -72,21 +72,23 @@ pub(super) fn write(
                 buf
             })
         }
-        Repr::Concise => delim_writer(buf, prefix, suffix, |mut buf| {
-            buf.push('\n');
+        // handle degenerate case where field name is not specified but Verbose is requested.
+        (Repr::Concise, _) | (Repr::Verbose, None) => {
+            delim_writer(buf, prefix, suffix, |mut buf| {
+                buf.push('\n');
 
-            let c = col + INDENT;
+                let c = col + INDENT;
 
-            for (k, v) in map {
-                write_indent(&mut buf, c);
-                buf = write_key_and_value_concise(buf, k, v, c);
-            }
+                for (k, v) in map {
+                    write_indent(&mut buf, c);
+                    buf = write_key_and_value_concise(buf, k, v, c);
+                }
 
-            write_indent(&mut buf, col);
-            buf
-        }),
-        Repr::Verbose => {
-            let field_name = field_name.expect("Verbose Maps require a field name");
+                write_indent(&mut buf, col);
+                buf
+            })
+        }
+        (Repr::Verbose, Some(field_name)) => {
             let val_indent = col + INDENT;
 
             for (k, v) in map {

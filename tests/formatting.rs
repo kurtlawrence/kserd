@@ -655,3 +655,42 @@ fn map_value_indenting() {
 }"#
     );
 }
+
+#[test]
+fn seq_of_seq_fmts_as_concise() {
+    // when seqs or maps do not have a field name (such as nested seqs of seqs or maps of maps) the
+    // formatting should be concise as not having a field name won't parse back.
+    let kserd = Kserd::new_cntr(vec![(
+        "seq",
+        Kserd::new(Value::Seq(vec![
+            Kserd::new(Value::Seq(vec![Kserd::new_num(0)])),
+            Kserd::new_map(vec![(Kserd::new_num(1), Kserd::new_num(2))]),
+        ])),
+    )])
+    .unwrap();
+
+    let _s = kserd.as_str_with_config(kserd::fmt::FormattingConfig {
+        width_limit: Some(0),
+        ..Default::default()
+    }); // should work with no panics
+}
+
+#[test]
+fn bug_1() {
+    let kserdstr = r#"render-as = "table"
+header = [ "Case","Expr","Desc" ]
+data = [
+    [1, "benchmark open foo-quals.csv", "Cloning in Table (6 MB)"]
+    [2, "benchmark open bar.csv", "Cloning in Table (922 MB)"]
+    [3, "open diamonds.csv | benchmark filter { get carat | > 0.3 }", "Filtering _out_ 10% rows"]
+    [4, "open diamonds.csv | benchmark filter { get carat | <= 0.3 }", "Filtering _to_ 10% rows"]
+]"#;
+
+    let kserd = kserd::parse::parse(kserdstr).unwrap();
+
+    println!("****** KSERD VALUE *******\n{:#?}", kserd);
+
+    let fmtd = kserd.as_str();
+
+    println!("{}", fmtd);
+}
