@@ -22,8 +22,8 @@ pub(super) fn write(
         buf
     };
 
-    match fmt.line {
-        Repr::Inline => {
+    match (fmt.line, field_name) {
+        (Repr::Inline, _) => {
             delim_writer(buf, prefix, suffix, |mut buf| {
                 let rm_trailing = !seq.is_empty();
 
@@ -39,24 +39,25 @@ pub(super) fn write(
                 buf
             })
         }
-        Repr::Concise => delim_writer(buf, prefix, suffix, |mut buf| {
-            buf.push('\n');
-
-            let c = col + INDENT;
-
-            for n in seq {
-                write_indent(&mut buf, c);
-                buf = write_node(buf, n, fmts, c);
+        // handle degenerate case where field name is not specified but Verbose is requested.
+        (Repr::Concise, _) | (Repr::Verbose, None) => {
+            delim_writer(buf, prefix, suffix, |mut buf| {
                 buf.push('\n');
-            }
 
-            write_indent(&mut buf, col);
+                let c = col + INDENT;
 
-            buf
-        }),
-        Repr::Verbose => {
-            let field_name = field_name.expect("Verbose Seqs require a field name");
+                for n in seq {
+                    write_indent(&mut buf, c);
+                    buf = write_node(buf, n, fmts, c);
+                    buf.push('\n');
+                }
 
+                write_indent(&mut buf, col);
+
+                buf
+            })
+        }
+        (Repr::Verbose, Some(field_name)) => {
             for n in seq {
                 // write field name
                 write_indent(&mut buf, col);
@@ -147,17 +148,14 @@ mod tests {
         // with id
         fmtr.id(0, true).unwrap();
 
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "something [\n]");
+        assert!(fmtr.concise(0).is_err());
+        assert!(fmtr.verbose(0).is_err());
 
         fmtr.inline(0).unwrap(); // inline
         assert_eq!(&fmtr.write_string(String::new()), "something []");
 
         // no id
         fmtr.id(0, false).unwrap();
-
-        fmtr.concise(0).unwrap(); // concise
-        assert_eq!(&fmtr.write_string(String::new()), "[\n]");
 
         fmtr.inline(0).unwrap(); // inline
         assert_eq!(&fmtr.write_string(String::new()), "[]");

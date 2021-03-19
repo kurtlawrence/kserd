@@ -1,4 +1,20 @@
 
+# 0.5.0
+- Increase MSRV to 1.50.0
+- Fix `Number::as_[u128,i128]` unsoundness issues (#29)
+- Fix number parsing, preferring integer parsing (#33)
+- Double float parsing performance for `Number::from_str` using the crate
+    [`flast-float`](https://crates.io/crates/fast-float).
+- Rework string primitive parsing such that strings are **literal** between two delimiters.
+  - The `parse` module documentation has examples.
+  - This means multiline strings are supported now and round trip
+  - Fixes some string roundtripping issues, all characters will be deserialised correctly.
+- Rework parsing, formatting, and encoding of ZSTs and enums to avoid round trip failures
+- Fix roundtripping bugs found by fuzz testing
+- Minor formatting changes
+- Upgrade `nom` to version `6`
+- Various bug fixes
+
 # 0.4.0
 - Add `Borrow` trait to `Kstr`
 - Added the container `Accessor` API

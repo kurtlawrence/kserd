@@ -1,7 +1,7 @@
 use super::*;
 
 /// Key-Value pair, of `Kserd` to `Kserd`.
-fn kvp_kserd_to_kserd<'a, E: ParseError<&'a str>>(
+fn kvp_kserd_to_kserd<'a, E: CxErr<'a>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, (Kserd<'a>, Kserd<'a>), E> {
     move |input: &'a str| {
@@ -23,12 +23,12 @@ fn kvp_kserd_to_kserd<'a, E: ParseError<&'a str>>(
 }
 
 /// Comma separated key-value pairs, where key and value are both `Kserd`s.
-fn inline_map_kserds<'a, E: ParseError<&'a str>>(
+fn inline_map_kserds<'a, E: CxErr<'a>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<(Kserd<'a>, Kserd<'a>)>, E> {
     context(
         "comma separated kserd-kserd pair",
-        separated_list(
+        separated_list0(
             ignore_inline_whitespace(char(',')),
             ignore_inline_whitespace(kvp_kserd_to_kserd(true)),
         ),
@@ -36,7 +36,7 @@ fn inline_map_kserds<'a, E: ParseError<&'a str>>(
 }
 
 /// Concise maps are separated by new lines.
-fn concise_map_kserds<'a, E: ParseError<&'a str>>(
+fn concise_map_kserds<'a, E: CxErr<'a>>(
     i: &'a str,
 ) -> IResult<&'a str, Vec<(Kserd<'a>, Kserd<'a>)>, E> {
     context(
@@ -44,7 +44,7 @@ fn concise_map_kserds<'a, E: ParseError<&'a str>>(
         preceded(
             multiline_whitespace,
             terminated(
-                separated_list(multiline_whitespace, kvp_kserd_to_kserd(false)),
+                separated_list0(multiline_whitespace, kvp_kserd_to_kserd(false)),
                 multiline_whitespace,
             ),
         ),
@@ -54,7 +54,7 @@ fn concise_map_kserds<'a, E: ParseError<&'a str>>(
 /// Parse as a sequence. Will `Fail` if delimited by opening brace `{`.
 /// Tries to determine if the stream is in `Concise` or `Inline` format using
 /// simple heuristics. The decision can be overridden by forcing `Inline` format.
-pub fn delimited<'a, E: ParseError<&'a str>>(
+pub(super) fn delimited<'a, E: CxErr<'a>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
     move |i: &'a str| {

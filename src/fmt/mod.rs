@@ -10,6 +10,12 @@
 //! For more fine control over a format, [`Formatter`] can be used to individually format `Kserd`
 //! nodes.
 //!
+//! > **String Formatting**
+//! >
+//! > Strings are formatted with the default double quote delimiter unless the string contains the
+//! > double quotes. At that point the formatting tries to use delimiter symbols that are not used
+//! > in the string.
+//!
 //! For each `Kserd` node, a format can exist which displays the _identity_, along with a line
 //! representation of the [`Value`]. There are three line representations, `Inline`, `Concise`, and
 //! `Verbose`. `Inline` and `Concise` representations are delimited, the `Verbose` formatting takes
@@ -78,7 +84,8 @@
 //!
 //! assert_eq!(
 //!     &s,
-//! r#"
+//! r#":my-crate
+//!
 //! [[dependencies]]
 //!     name = "serde"
 //!     version = "1"
@@ -87,7 +94,7 @@
 //!     name = "rand"
 //!     version = "0.5"
 //!
-//! [package]
+//! [package:Package]
 //!     name = "a-crate"
 //!     version = "0.1.0"
 //! "#
@@ -113,7 +120,8 @@
 //!
 //! assert_eq!(
 //!     &s,
-//! r#"
+//! r#":my-crate
+//!
 //! [[dependencies]]
 //!     name = "serde"
 //!     version = "1"
@@ -134,7 +142,7 @@
 //! [`Value`]: crate::Value
 use super::*;
 use nav::*;
-use std::fmt::{self as stdfmt, Debug, Display};
+use std::fmt::{self as stdfmt, Debug, Display, Write as _};
 
 mod cntr;
 mod formatter;
@@ -197,7 +205,7 @@ const INDENT: usize = 4;
 /// ```
 ///
 /// [`Kserd`]: crate::Kserd
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FormattingConfig {
     /// Display the identity on primitive values.
     /// _Default is false._
@@ -250,7 +258,7 @@ pub struct FormattingConfig {
     ///
     /// assert_eq!(
     ///     &kserd.as_str_with_config(show_tuples),
-    ///     "a-tuple ()"
+    ///     "a-tuple()"
     /// );
     /// ```
     pub id_on_tuples: bool,
@@ -318,7 +326,7 @@ pub struct FormattingConfig {
     ///
     /// assert_eq!(
     ///     &kserd.as_str_with_config(show_maps),
-    ///     "a-map {  }"
+    ///     "a-map {}"
     /// );
     /// ```
     pub id_on_maps: bool,
@@ -336,7 +344,7 @@ pub struct FormattingConfig {
     ///
     /// [`FormattingConfig`]: FormattingConfig
     /// [`Kserd`]: crate::Kserd
-    pub width_limit: Option<usize>,
+    pub width_limit: Option<u16>,
     // pub line_limit: Option<usize>, // TODO: Include this on stabilisation
 }
 
@@ -479,7 +487,7 @@ fn write_node(buf: String, node: Node, fmts: &[Fmt], col: usize) -> String {
     match node.value() {
         NodeValue::Primitive => prims::write(buf, node.kserd(), fmts.get(node.index()).unwrap().id),
         NodeValue::Tuple(seq) => tuples::write(buf, node, fmts, col, seq),
-        NodeValue::Cntr(map) => cntr::write(buf, node, fmts, col, map),
+        NodeValue::Cntr(map) => cntr::write(buf, node, fmts, col, true, map),
         NodeValue::Seq(seq) => seqs::write(buf, node, fmts, col, seq, None),
         NodeValue::Map(map) => maps::write(buf, node, fmts, col, map, None),
     }
@@ -492,70 +500,75 @@ impl<'a> Display for Kserd<'a> {
     }
 }
 
-#[test]
-fn test_mod_docs_example() {
-    // we will manually construct a Kserd, but you could use Serialize
-    // to do this instead.
-    let cargotoml = Kserd::with_id(
-        "my-crate",
-        Value::new_cntr(vec![
-            (
-                "package",
-                Kserd::with_id(
-                    "Package",
-                    Value::new_cntr(vec![
-                        ("name", Kserd::new_str("a-crate")),
-                        ("version", Kserd::new_str("0.1.0")),
-                    ])
-                    .unwrap(),
-                )
-                .unwrap(),
-            ),
-            (
-                "dependencies",
-                Kserd::new(Value::Seq(vec![
-                    Kserd::new_cntr(vec![
-                        ("name", Kserd::new_str("serde")),
-                        ("version", Kserd::new_str("1")),
-                    ])
-                    .unwrap(),
-                    Kserd::new_cntr(vec![
-                        ("name", Kserd::new_str("rand")),
-                        ("version", Kserd::new_str("0.5")),
-                    ])
-                    .unwrap(),
-                ])),
-            ),
-        ])
-        .unwrap(),
-    )
-    .unwrap();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // let's look at the default formatting
-    let s = cargotoml.as_str();
+    #[test]
+    fn test_mod_docs_example() {
+        // we will manually construct a Kserd, but you could use Serialize
+        // to do this instead.
+        let cargotoml = Kserd::with_id(
+            "my-crate",
+            Value::new_cntr(vec![
+                (
+                    "package",
+                    Kserd::with_id(
+                        "Package",
+                        Value::new_cntr(vec![
+                            ("name", Kserd::new_str("a-crate")),
+                            ("version", Kserd::new_str("0.1.0")),
+                        ])
+                        .unwrap(),
+                    )
+                    .unwrap(),
+                ),
+                (
+                    "dependencies",
+                    Kserd::new(Value::Seq(vec![
+                        Kserd::new_cntr(vec![
+                            ("name", Kserd::new_str("serde")),
+                            ("version", Kserd::new_str("1")),
+                        ])
+                        .unwrap(),
+                        Kserd::new_cntr(vec![
+                            ("name", Kserd::new_str("rand")),
+                            ("version", Kserd::new_str("0.5")),
+                        ])
+                        .unwrap(),
+                    ])),
+                ),
+            ])
+            .unwrap(),
+        )
+        .unwrap();
 
-    assert_eq!(
-        &s,
-        r#"my-crate (
+        // let's look at the default formatting
+        let s = cargotoml.as_str();
+
+        assert_eq!(
+            &s,
+            r#"my-crate (
     dependencies = [
                        (name = "serde", version = "1")
                        (name = "rand", version = "0.5")
                    ]
     package = Package (name = "a-crate", version = "0.1.0")
 )"#
-    );
+        );
 
-    // we can format it much more verbosely
-    // it becomes more readable
-    let config = FormattingConfig {
-        width_limit: Some(0),
-        ..Default::default()
-    };
-    let s = cargotoml.as_str_with_config(config);
+        // we can format it much more verbosely
+        // it becomes more readable
+        let config = FormattingConfig {
+            width_limit: Some(0),
+            ..Default::default()
+        };
+        let s = cargotoml.as_str_with_config(config);
 
-    assert_eq!(
-        &s,
-        r#"
+        assert_eq!(
+            &s,
+            r#":my-crate
+
 [[dependencies]]
     name = "serde"
     version = "1"
@@ -564,33 +577,34 @@ fn test_mod_docs_example() {
     name = "rand"
     version = "0.5"
 
-[package]
+[package:Package]
     name = "a-crate"
     version = "0.1.0"
 "#
-    );
+        );
 
-    // maybe we want the package to be inline.
+        // maybe we want the package to be inline.
 
-    let mut fmtr = Formatter::new(&cargotoml);
+        let mut fmtr = Formatter::new(&cargotoml);
 
-    fmtr.apply_config(config); // apply the config as before
+        fmtr.apply_config(config); // apply the config as before
 
-    // we get the index of the Package by filtering on id
-    fmtr.inline(
-        fmtr.nodes()
-            .filter(|n| n.kserd().id() == Some("Package"))
-            .map(|n| n.index())
-            .next()
-            .unwrap(),
-    )
-    .unwrap();
+        // we get the index of the Package by filtering on id
+        fmtr.inline(
+            fmtr.nodes()
+                .filter(|n| n.kserd().id() == Some("Package"))
+                .map(|n| n.index())
+                .next()
+                .unwrap(),
+        )
+        .unwrap();
 
-    let s = fmtr.write_string(String::new());
+        let s = fmtr.write_string(String::new());
 
-    assert_eq!(
-        &s,
-        r#"
+        assert_eq!(
+            &s,
+            r#":my-crate
+
 [[dependencies]]
     name = "serde"
     version = "1"
@@ -600,5 +614,26 @@ fn test_mod_docs_example() {
     version = "0.5"
 package = Package (name = "a-crate", version = "0.1.0")
 "#
-    );
+        );
+    }
+
+    #[test]
+    fn string_formatting_test() {
+        let s = |s| Kserd::new_str(s).as_str();
+
+        assert_eq!(s(""), r#""""#);
+        assert_eq!(s("Hello, world!"), r#""Hello, world!""#);
+        assert_eq!(
+            s("Hello\nWorld"),
+            r#""Hello
+World""#
+        );
+        assert_eq!(s("Hello \"World\""), r#"str'Hello "World"'"#);
+        assert_eq!(
+            s("'Hello'\n\"World\""),
+            r##"str#'Hello'
+"World"#"##
+        );
+        assert_eq!(s("#Hello# \"World\""), r#"str'#Hello# "World"'"#);
+    }
 }

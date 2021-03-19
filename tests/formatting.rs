@@ -40,7 +40,7 @@ fn fmt_unit() {
     println!("{}", s);
     assert_eq!(
         &s,
-        r#"Units (uenum = EnumVariant, ustruct = AStruct, uvalue = ())"#
+        r#"Units (uenum = EnumVariant(), ustruct = AStruct(), uvalue = ())"#
     );
 
     config.width_limit = Some(25);
@@ -49,8 +49,8 @@ fn fmt_unit() {
     assert_eq!(
         &s,
         r#"Units (
-    uenum = EnumVariant
-    ustruct = AStruct
+    uenum = EnumVariant()
+    ustruct = AStruct()
     uvalue = ()
 )"#
     );
@@ -60,8 +60,9 @@ fn fmt_unit() {
     println!("{}", s);
     assert_eq!(
         &s,
-        r#"uenum = EnumVariant
-ustruct = AStruct
+        r#":Units
+uenum = EnumVariant()
+ustruct = AStruct()
 uvalue = ()
 "#
     );
@@ -160,7 +161,7 @@ fn fmt_float() {
 
 #[test]
 fn fmt_str() {
-    let kserd = Kserd::enc(&"My ❤ beats,\non a new line!").unwrap();
+    let kserd = Kserd::enc(&"My ❤ \"beats\",\non a 'new' line!").unwrap();
 
     let with_ident = FormattingConfig {
         id_on_primitives: true,
@@ -174,11 +175,13 @@ fn fmt_str() {
 
     assert_eq!(
         &kserd.as_str_with_config(without_ident),
-        r#""My ❤ beats,\non a new line!""#
+        r##"str#My ❤ "beats",
+on a 'new' line!#"##
     );
     assert_eq!(
         &kserd.as_str_with_config(with_ident),
-        r#"<str> "My ❤ beats,\non a new line!""#
+        r##"<str> str#My ❤ "beats",
+on a 'new' line!#"##
     );
 }
 
@@ -199,11 +202,13 @@ fn fmt_string() {
 
     assert_eq!(
         &kserd.as_str_with_config(without_ident),
-        r#""My ❤ beats,\non a new line!""#
+        r#""My ❤ beats,
+on a new line!""#
     );
     assert_eq!(
         &kserd.as_str_with_config(with_ident),
-        r#"<str> "My ❤ beats,\non a new line!""#
+        r#"<str> "My ❤ beats,
+on a new line!""#
     );
 }
 
@@ -345,7 +350,8 @@ fn fmt_struct() {
     println!("{}", s);
     assert_eq!(
         &s,
-        r#"a = 100
+        r#":Simple
+a = 100
 b = (
         -1
         -2
@@ -558,21 +564,25 @@ name = "A simple mapping"
     println!("*** 14 width ***\n{}", s);
     assert_eq!(
         &s,
-        r#"
+        r#":SimpleMap
+
 [[mapping]]
 (1, 2):
+    :Simple
     a = 100
     b = (0, 1)
     c = [2, 3]
 
 [[mapping]]
 (2, 3):
+    :Simple
     a = 101
     b = (1, 2)
     c = [4, 5]
 
 [[mapping]]
 (3, 4):
+    :Simple
     a = 103
     b = (2, 3)
     c = [6, 7]
@@ -644,4 +654,43 @@ fn map_value_indenting() {
                 )
 }"#
     );
+}
+
+#[test]
+fn seq_of_seq_fmts_as_concise() {
+    // when seqs or maps do not have a field name (such as nested seqs of seqs or maps of maps) the
+    // formatting should be concise as not having a field name won't parse back.
+    let kserd = Kserd::new_cntr(vec![(
+        "seq",
+        Kserd::new(Value::Seq(vec![
+            Kserd::new(Value::Seq(vec![Kserd::new_num(0)])),
+            Kserd::new_map(vec![(Kserd::new_num(1), Kserd::new_num(2))]),
+        ])),
+    )])
+    .unwrap();
+
+    let _s = kserd.as_str_with_config(kserd::fmt::FormattingConfig {
+        width_limit: Some(0),
+        ..Default::default()
+    }); // should work with no panics
+}
+
+#[test]
+fn bug_1() {
+    let kserdstr = r#"render-as = "table"
+header = [ "Case","Expr","Desc" ]
+data = [
+    [1, "benchmark open foo-quals.csv", "Cloning in Table (6 MB)"]
+    [2, "benchmark open bar.csv", "Cloning in Table (922 MB)"]
+    [3, "open diamonds.csv | benchmark filter { get carat | > 0.3 }", "Filtering _out_ 10% rows"]
+    [4, "open diamonds.csv | benchmark filter { get carat | <= 0.3 }", "Filtering _to_ 10% rows"]
+]"#;
+
+    let kserd = kserd::parse::parse(kserdstr).unwrap();
+
+    println!("****** KSERD VALUE *******\n{:#?}", kserd);
+
+    let fmtd = kserd.as_str();
+
+    println!("{}", fmtd);
 }

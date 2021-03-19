@@ -1,13 +1,13 @@
 use super::*;
 
-fn from_str<'a, T: FromStr, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, T, E> {
+fn from_str<'a, T: FromStr, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, T, E> {
     i.parse::<T>()
         .map(|x| ("", x))
         .map_err(|_| Err::Error(error::make_error(i, ErrorKind::ParseTo)))
 }
 
 /// A unit value (`()`). Note can have inline whitespace.
-pub fn unit_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, (), E> {
+pub(super) fn unit_value<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, (), E> {
     context(
         "unit value",
         map(
@@ -17,115 +17,50 @@ pub fn unit_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, ()
     )(i)
 }
 
-fn boolean<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, bool, E> {
+fn boolean<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, bool, E> {
     context(
         "boolean",
         alt((map(tag("true"), |_| true), map(tag("false"), |_| false))),
     )(i)
 }
 
-fn uint<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, u128, E> {
-    context("unsigned integer", map_parser(digit1, from_str))(i)
-}
-
-fn int<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, i128, E> {
+fn num<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Number, E> {
+    const ALLOW: &str = "-.einfNa";
     context(
-        "signed integer",
+        "number",
         map_parser(
-            take_while(|c: char| c == '-' || c.is_ascii_digit()),
+            take_while(|c: char| c.is_ascii_digit() || ALLOW.contains(c)),
             from_str,
         ),
     )(i)
 }
 
-fn num<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Number, E> {
-    context(
-        "number",
-        alt((
-            map(double, Number::from),
-            map(int, Number::from),
-            map(uint, Number::from),
+fn parse_str<'a, E: CxErr<'a>>(
+    delimiter: char,
+) -> impl FnMut(&'a str) -> IResult<&'a str, Kstr<'a>, E> {
+    preceded(
+        char(delimiter),
+        cut(terminated(
+            map(take_till(move |c| c == delimiter), Kstr::brwed),
+            char(delimiter),
         )),
-    )(i)
+    )
 }
 
-/// Takes what could be string contents until a string terminator is reached.
-/// The terminator is one of [`"`, `'`, `\t`, `\r`, `\n`].
-fn take_str_until_terminated(i: &str) -> (&str, &str) {
-    let mut preceded_by_backslash = false;
-
-    for (idx, ch) in i.char_indices() {
-        if "\t\r\n".contains(ch) {
-            return (&i[idx..], &i[..idx]);
-        }
-        if !preceded_by_backslash && ch == '\"' {
-            return (&i[idx..], &i[..idx]);
-        }
-
-        preceded_by_backslash = ch == '\\';
-    }
-
-    let to = i.len();
-
-    (&i[to..], &i[..to])
-}
-
-const ESC_QUOTE: &str = r#"\'"#;
-const ESC_DBL_QUOTE: &str = r#"\""#;
-const ESC_BACKSLASH: &str = r#"\"#;
-const ESC_TAB: &str = r#"\t"#;
-const ESC_CR: &str = r#"\r"#;
-const ESC_LF: &str = r#"\n"#;
-
-fn str_contains_escaped(i: &str) -> bool {
-    i.contains(ESC_QUOTE)
-        || i.contains(ESC_DBL_QUOTE)
-        || i.contains(ESC_BACKSLASH)
-        || i.contains(ESC_TAB)
-        || i.contains(ESC_CR)
-        || i.contains(ESC_LF)
-}
-
-fn parse_str(i: &str) -> (&str, Kstr<'_>) {
-    let (i, string) = take_str_until_terminated(i);
-
-    let kstr = if str_contains_escaped(string) {
-        let string = string
-            .replace(ESC_QUOTE, "'")
-            .replace(ESC_DBL_QUOTE, "\"")
-            .replace(ESC_BACKSLASH, "\\")
-            .replace(ESC_TAB, "\t")
-            .replace(ESC_CR, "\r")
-            .replace(ESC_LF, "\n");
-
-        Kstr::owned(string)
+fn string<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
+    let (d, i) = if let Some(suff) = i.strip_prefix("str") {
+        (suff.chars().next().unwrap_or('"'), suff)
     } else {
-        Kstr::brwed(string)
+        ('"', i)
     };
-
-    (i, kstr)
+    context("string", parse_str(d))(i)
 }
 
-fn string<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kstr<'a>, E> {
-    context(
-        "string",
-        preceded(
-            char('\"'),
-            cut(terminated(|i| Ok(parse_str(i)), char('\"'))),
-        ),
-    )(i)
-}
-
-#[inline(always)]
-pub fn barr_tag<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
-    tag("b91'")(i)
-}
-
-fn barr<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E> {
+fn barr<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E> {
     context(
         "base 91 byte array",
         preceded(
-            barr_tag,
+            tag("b91'"),
             cut(terminated(
                 map(take_till(|c| c == '\''), |bytes: &str| {
                     Barr::owned(base91::slice_decode(bytes.as_bytes()))
@@ -136,7 +71,7 @@ fn barr<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Barr<'a>, E>
     )(i)
 }
 
-fn prim_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Value<'a>, E> {
+fn prim_value<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Value<'a>, E> {
     context(
         "primitive value",
         alt((
@@ -151,7 +86,7 @@ fn prim_value<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Value<
 
 /// A primitive is always formatted the same way; inline with optional `<ident>` out
 /// the front. The value can also have _inline_ whitespace in-between the ident.
-pub fn prim<'a, E: ParseError<&'a str>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
+pub(super) fn prim<'a, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, Kserd<'a>, E> {
     let (i, (ident, value)) = context(
         "primitive",
         separated_pair(opt(ident(true)), inline_whitespace, prim_value),
@@ -173,47 +108,26 @@ mod tests {
 
     #[test]
     fn test_string() {
-        macro_rules! test_parse_str {
-	    ( $($str:literal),* ) => {
-		$(
-		    let var: &str = $str;
-		    let s = format!("{}", var);
-		    let r = parse_str(&s);
-		    assert_eq!(r, ("", Kstr::brwed(var)));
-		)*
-	    };
-	}
-
-        assert_eq!(parse_str(" \""), ("\"", Kstr::brwed(" ")));
-        assert_eq!(parse_str(" \t"), ("\t", Kstr::brwed(" ")));
-        assert_eq!(parse_str(" \r"), ("\r", Kstr::brwed(" ")));
-        assert_eq!(parse_str(" \n"), ("\n", Kstr::brwed(" ")));
-
-        test_parse_str!("", "abcd");
-
         macro_rules! test_str {
-	    ( $($str:literal),* ) => {
+	    ( $($parse:literal $res:literal $rem:literal),* ) => {
 		$(
-		    let var: &str = $str;
-		    let s = format!("{:?}", var);
-		    println!("{}", s);
-		    let r = string::<VerboseError<_>>(&s);
-		    assert_eq!(r, Ok(("", Kstr::brwed(var))));
+		    let r = string::<VerboseError<_>>($parse);
+		    assert_eq!(r, Ok(($rem, Kstr::brwed($res))));
 		)*
 	    };
 	}
 
         test_str!(
-            "",
-            "abcdef",
-            "Hello, world!",
-            "Hello\nnewline",
-            " ",
-            "\r\n \n",
-            "\t",
-            "  \"  ",
-            "  '  ",
-            "'\t\n\r\n\""
+            r#""""# "" "",
+            r#""abcdef""# "abcdef" "",
+            r#""Hello, world!""# "Hello, world!" "",
+            "\"Hello\nnewline\"" "Hello\nnewline" "",
+            "\" \"" " " "",
+            "\"\r\n \n\"" "\r\n \n" "",
+            "\"\t\"" "\t" "",
+            "str'  \"  '" "  \"  " "",
+            "str\"  '  \"" "  '  " "",
+            "\"'\t\n\r\n\"" "'\t\n\r\n" ""
         );
     }
 
@@ -248,5 +162,74 @@ mod tests {
         assert_eq!(r, Ok((",", Barr::brwed(&[82]))));
         let r = barr::<VerboseError<_>>("b91'],',");
         assert_eq!(r, Ok((",", Barr::brwed(&[143]))));
+    }
+
+    #[test]
+    fn unsigned_numbers() {
+        let u = |x: u128| {
+            assert_eq!(
+                Some(x),
+                num::<()>(&x.to_string())
+                    .ok()
+                    .and_then(|x| x.1.as_u128().ok())
+            )
+        };
+        u(0);
+        u(1);
+        u(std::u8::MAX as u128);
+        u(std::u16::MAX as u128);
+        u(std::u32::MAX as u128);
+        u(std::u64::MAX as u128);
+        u(std::u128::MAX as u128);
+        u(16803534192531604596);
+        u(16803534192531605504);
+    }
+
+    #[test]
+    fn signed_numbers() {
+        let u = |x: i128| {
+            assert_eq!(
+                Some(x),
+                num::<()>(&x.to_string())
+                    .ok()
+                    .and_then(|x| x.1.as_i128().ok())
+            )
+        };
+        u(0);
+        u(1);
+        u(-1);
+        u(std::i8::MAX as i128);
+        u(std::i8::MIN as i128);
+        u(std::i16::MAX as i128);
+        u(std::i16::MIN as i128);
+        u(std::i32::MAX as i128);
+        u(std::i32::MIN as i128);
+        u(std::i64::MAX as i128);
+        u(std::i64::MIN as i128);
+        u(std::i128::MAX as i128);
+        u(std::i128::MIN as i128);
+    }
+
+    #[test]
+    fn float_numbers() {
+        let u = |x: f64| {
+            assert_eq!(
+                Some(x),
+                num::<()>(&x.to_string()).ok().map(|x| x.1.as_f64())
+            )
+        };
+        use std::f64::consts::*;
+        u(0.0);
+        u(-0.0);
+        u(E);
+        u(FRAC_1_PI);
+        u(FRAC_1_SQRT_2);
+        u(LN_2);
+        u(LN_10);
+        u(PI);
+        u(TAU);
+        u(std::f64::INFINITY);
+        u(std::f64::NEG_INFINITY);
+        // u(std::f64::NAN); can't check NaN != Nan!
     }
 }

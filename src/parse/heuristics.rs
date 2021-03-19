@@ -12,15 +12,19 @@ pub enum Nonprim {
 /// This only matches `Inline` and `Concise` variants. Looks ahead to guess type
 /// based on opening delimiters and field naming. _Always_ returns the original
 /// input.
-pub fn pattern_match_delimited<'a, E: ParseError<&'a str>>(
+pub(super) fn pattern_match_delimited<'a, E: CxErr<'a>>(
     orig: &'a str,
 ) -> IResult<&'a str, Nonprim, E> {
-    #[derive(PartialEq)]
+    #[derive(PartialEq, Debug)]
     enum Ident {
         Prim,
         Nonprim,
         None,
     };
+
+    if orig.starts_with("true") || orig.starts_with("false") {
+        return Ok((orig, Nonprim::None));
+    }
 
     let (i, ident_) = opt(ident(true))(orig)?;
     let (i, ident_) = if ident_.is_some() {
@@ -63,9 +67,7 @@ pub fn pattern_match_delimited<'a, E: ParseError<&'a str>>(
 
 /// This only matches `Verbose` variants, returning true if it looks like a `Verbose` formatting.
 /// _Always_ returns the original input.
-pub fn pattern_match_verbose<'a, E: ParseError<&'a str>>(
-    orig: &'a str,
-) -> IResult<&'a str, bool, E> {
+pub(super) fn pattern_match_verbose<'a, E: CxErr<'a>>(orig: &'a str) -> IResult<&'a str, bool, E> {
     let (i, _) = multiline_whitespace(orig)?; // ignore _all_ whitespace before hand
 
     // generally a Verbose format can be recognised by:
@@ -94,7 +96,7 @@ pub fn pattern_match_verbose<'a, E: ParseError<&'a str>>(
 
 /// Looks at the next characters, ignoring spaces. If there is a a new line before
 /// other characters then we say that this is in `Concise` format.
-pub fn recognise_concise(i: &str) -> bool {
+pub(super) fn recognise_concise(i: &str) -> bool {
     const SKIP: &str = " \t\r";
 
     i.chars()
@@ -104,7 +106,7 @@ pub fn recognise_concise(i: &str) -> bool {
 }
 
 /// Recognises the sequence: `field_name =`.
-pub fn recognise_field_assign(i: &str) -> bool {
+pub(super) fn recognise_field_assign(i: &str) -> bool {
     // maybe_names is a litle more relaxed than field_name so it can recognise but still fail
     let not = "<>(){}='\"\r\n";
     let maybe_names =
@@ -131,14 +133,24 @@ mod tests {
         test!(
             Nonprim::None,
             "123456",
+            "123456 [",
             "-123456",
+            "-123456 [",
             "-3.14e-314",
+            "-3.14e-314 [",
             "()",
+            "() [",
             "a = 123",
+            "a = 123 [",
             r#""Hello, world!""#,
+            r#""Hello, world!" ["#,
+            r#"str'Hello, world!'"#,
             "true",
+            "true [",
             "false",
-            "b91':C!WEH#L4R'"
+            "false\n[",
+            "b91':C!WEH#L4R'",
+            "b91':C!WEH#L4R' ["
         );
     }
 

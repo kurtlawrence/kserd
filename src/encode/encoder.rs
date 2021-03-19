@@ -135,7 +135,7 @@ impl ser::Serializer for Encoder {
     }
 
     fn serialize_none(self) -> Res {
-        Ok(Kserd::with_id_unchk("None", Value::Unit))
+        Ok(Kserd::with_id_unchk("None", Value::Tuple(vec![])))
     }
 
     fn serialize_some<T: ?Sized + Serialize>(self, v: &T) -> Res {
@@ -150,11 +150,11 @@ impl ser::Serializer for Encoder {
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Res {
-        Kserd::with_id(name, Value::Unit).map_err(Error::InvalidId)
+        Kserd::with_id(name, Value::Tuple(vec![])).map_err(Error::InvalidId)
     }
 
     fn serialize_unit_variant(self, _: &'static str, _: u32, variant: &'static str) -> Res {
-        Kserd::with_id(variant, Value::Unit).map_err(Error::InvalidId)
+        Kserd::with_id(variant, Value::Tuple(vec![])).map_err(Error::InvalidId)
     }
 
     fn serialize_newtype_struct<T: ?Sized + Serialize>(self, name: &'static str, value: &T) -> Res {

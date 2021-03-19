@@ -54,9 +54,3 @@ The kserd library is feature gated, but all features are enabled by default.
 | _encode_ | Convert data structures to and from `Kserd`. Makes use of `serde` `Serialize` and `Deserialize` traits. | [`kserd::encode`](crate::encode) |
 | _format_ | Format a `Kserd` to a human-readable string. | [`kserd::format`](crate::fmt) |
 | _parse_  | Parse a string into a `Kserd`. | [`kserd::parse`](crate::parse) |
-
-## To `1.0` Stabilistations
-
-- [ ] stabilise `kserd_derive` crate
-- [ ] extra implementations for `ToKserd`
-- [ ] further testing of parsing to catch edge cases

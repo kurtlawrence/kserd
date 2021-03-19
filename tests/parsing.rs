@@ -65,8 +65,6 @@ mod misc {
             &Kserd::new_cntr(vec![("a", Kserd::new_num(101)), ("b", Kserd::new_num(202))]).unwrap()
         );
 
-        dbg!("here");
-
         let s = "[[list]]
 \"Hello, world!\"
 
@@ -108,6 +106,43 @@ mod misc {
         ])
         .unwrap();
         do_test!(s, &kserd);
+    }
+
+    #[test]
+    fn bug_2() {
+        let s = r#":ScatterPlot
+data = "./zog.csv"
+
+use_gl = false
+
+[[fmts]]
+"foo":
+    colour = "BurlyWood"
+[[fmts]]
+"bar":
+    colour = "DimGray"
+"#;
+        do_test!(
+            s,
+            &Kserd::new_cntr(vec![
+                ("data", Kserd::new_str("./zog.csv")),
+                ("use_gl", Kserd::new_bool(false)),
+                (
+                    "fmts",
+                    Kserd::new_map(vec![
+                        (
+                            Kserd::new_str("foo"),
+                            Kserd::new_cntr(vec![("colour", Kserd::new_str("BurlyWood"))]).unwrap()
+                        ),
+                        (
+                            Kserd::new_str("bar"),
+                            Kserd::new_cntr(vec![("colour", Kserd::new_str("DimGray"))]).unwrap()
+                        )
+                    ])
+                )
+            ])
+            .unwrap()
+        );
     }
 }
 
@@ -513,6 +548,10 @@ mod containers {
                                             vec![
                                                 ("a_number", Kserd::new_num(3.0)),
                                                 ("a_string", Kserd::new_str("Hello,")),
+                                                (
+                                                    "inner_test_items",
+                                                    Kserd::new(Value::Seq(vec![])),
+                                                ),
                                             ]
                                             .into_iter()
                                             .map(|(k, v)| (k.into(), v))
@@ -530,6 +569,10 @@ mod containers {
                                             vec![
                                                 ("a_number", Kserd::new_num(0.14)),
                                                 ("a_string", Kserd::new_str("world!")),
+                                                (
+                                                    "inner_test_items",
+                                                    Kserd::new(Value::Seq(vec![])),
+                                                ),
                                             ]
                                             .into_iter()
                                             .map(|(k, v)| (k.into(), v))
@@ -961,6 +1004,37 @@ what the = 101
 #1: at 4:9 :: in name-kserd key value pair
         c
         ^";
+        check_backtrace!(s, ans);
+    }
+
+    #[test]
+    fn bug_poor_error_trace() {
+        let s = r#"imgs = [
+    Image ( src = "" )
+    Image (
+        src = "",
+        title = ""
+    )
+]"#;
+        let ans = r#"#0: at 4:17 :: in SeparatedList
+        src = "",
+                ^
+
+#1: at 3:12 :: in newline separated (concise) kserdstr-kserd pair
+    Image (
+           ^
+
+#2: at 3:12 :: in concise container
+    Image (
+           ^
+
+#3: at 1:9 :: in multi-line (concise) sequence
+imgs = [
+        ^
+
+#4: at 1:1 :: in name-kserd key value pair
+imgs = [
+^"#;
         check_backtrace!(s, ans);
     }
 }
