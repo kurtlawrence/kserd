@@ -1,5 +1,5 @@
 
-# New
+# 0.5.0
 - Increase MSRV to 1.50.0
 - Fix `Number::as_[u128,i128]` unsoundness issues (#29)
 - Fix number parsing, preferring integer parsing (#33)
