@@ -14,7 +14,7 @@ impl<'a, 'k> Navigator<'a, 'k> {
             parent: Option<usize>,
             value_idx_in_parent: Option<usize>,
             key_idx_in_parent: Option<usize>,
-        };
+        }
 
         let mut stack = vec![(Info::default(), root)];
 
@@ -110,7 +110,7 @@ impl<'a, 'k> Navigator<'a, 'k> {
             idx: usize,
             value_idx_in_parent: Option<usize>,
             key_idx_in_parent: Option<usize>,
-        };
+        }
 
         let mut parent_map = HashMap::with_capacity(inner.len());
 

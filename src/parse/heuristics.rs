@@ -20,7 +20,7 @@ pub(super) fn pattern_match_delimited<'a, E: CxErr<'a>>(
         Prim,
         Nonprim,
         None,
-    };
+    }
 
     if orig.starts_with("true") || orig.starts_with("false") {
         return Ok((orig, Nonprim::None));

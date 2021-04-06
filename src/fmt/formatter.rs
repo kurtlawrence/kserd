@@ -471,7 +471,7 @@ impl FmtError {
                 Repr::Concise => "concise",
                 Repr::Verbose => "verbose",
             }
-        };
+        }
         FmtError::RequestTooHigh(n(max), n(request))
     }
 }

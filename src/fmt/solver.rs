@@ -270,7 +270,7 @@ fn concise_width(node: &Kserd, config: &FormattingConfig) -> usize {
 // make a note that this DOES NOT RESET formatting
 pub fn apply_config(fmtr: &mut Formatter, config: FormattingConfig) {
     use NodeValue::*;
-    use Repr::*;;
+    use Repr::*;
     // first run through and just apply the displaying of identities, pretty easy
     for i in 0..fmtr.len() {
         let id = match fmtr.get(i).unwrap().value() {
