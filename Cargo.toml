@@ -2,7 +2,7 @@
 name = "kserd"
 version = "0.5.0"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Kurt's Self-Explanatory Rust Data"
 documentation = "https://docs.rs/kserd/"
 homepage = "https://github.com/kurtlawrence/kserd"
