@@ -259,7 +259,6 @@ impl<'a> Value<'a> {
     where
         I: IntoIterator<Item = (Kserd<'a>, Kserd<'a>)>,
     {
-        use std::iter::FromIterator;
         let map = BTreeMap::from_iter(iter);
         Value::Map(map)
     }

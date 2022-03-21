@@ -50,7 +50,6 @@ fn concise_cntr_kserds<'a, E: CxErr<'a>>(
 pub(super) fn delimited<'a, E: CxErr<'a>>(
     force_inline: bool,
 ) -> impl Fn(&'a str) -> IResult<&'a str, Kserd<'a>, E> {
-    use std::iter::FromIterator;
     move |i: &'a str| {
         let (i, ident) = opt(ident(false))(i)?;
 

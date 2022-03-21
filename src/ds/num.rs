@@ -223,12 +223,13 @@ impl fmt::Display for Number {
 impl FromStr for Number {
     type Err = IntoNumberErr;
     fn from_str(s: &str) -> Result<Self, IntoNumberErr> {
-        use ::lexical_core::parse_format;
+        use ::lexical_core::parse_with_options as parse;
         if s.is_empty() {
             return Err(IntoNumberErr);
         }
 
-        let fmt = ::lexical_core::NumberFormat::OCAML_STRING;
+        const FMT: u128 = ::lexical_core::format::OCAML_STRING;
+        let options = &::lexical_core::ParseIntegerOptions::new();
         let bytes = s.as_bytes();
         let neg = bytes[0] == b'-';
         let valid_int = bytes
@@ -239,11 +240,11 @@ impl FromStr for Number {
         if !valid_int {
             ::fast_float::parse(s).map(Float).map_err(|_| IntoNumberErr)
         } else if neg {
-            parse_format::<i128>(bytes, fmt)
+            parse::<i128, FMT>(bytes, options)
                 .map(Int)
                 .map_err(|_| IntoNumberErr)
         } else {
-            parse_format::<u128>(bytes, fmt)
+            parse::<u128, FMT>(bytes, options)
                 .map(Uint)
                 .map_err(|_| IntoNumberErr)
         }

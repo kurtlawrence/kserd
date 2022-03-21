@@ -2,7 +2,7 @@
 name = "kserd"
 version = "0.5.0"
 authors = ["kurt <kurtlawrence92@gmail.com>"]
-edition = "2018"
+edition = "2021"
 description = "Kurt's Self-Explanatory Rust Data"
 documentation = "https://docs.rs/kserd/"
 homepage = "https://github.com/kurtlawrence/kserd"
@@ -15,8 +15,8 @@ license = "MIT"
 base91 =       { version = "0.0.1", optional = true,	default-features = false }
 bitflags = "1"
 fast-float =   "0.2"
-lexical-core = { version = "0.7",   optional = false,	default-features = false,   features = [ "std", "format" ] }
-nom =	       { version = "6",	    optional = true,	default-features = false,   features = [ "std" ] }
+lexical-core = { version = "0.8",   optional = false,	default-features = true , features = [ "format" ] }
+nom =	       { version = "7",	    optional = true,	default-features = false,   features = [ "std" ] }
 serde =	       { version = "1",	    optional = true, 	default-features = false,   features = [ "std" ] }
 
 [features]
