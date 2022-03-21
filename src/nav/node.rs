@@ -124,7 +124,7 @@ impl<'a, 'k, 'nav: 'node, 'node> Node<'a, 'k, 'nav, 'node> {
 
     /// The underlying [`Kserd`](crate::Kserd).
     pub fn kserd(&self) -> &'a Kserd<'k> {
-        &self.node.kserd
+        self.node.kserd
     }
 
     /// The node-type value.
@@ -234,7 +234,7 @@ impl<'a, 'k, 'nav: 'node, 'node> Node<'a, 'k, 'nav, 'node> {
         let mut todo =
             Vec::with_capacity(self.node.key_children.len() + self.node.value_children.len());
 
-        push_children(&self.node, &mut todo);
+        push_children(self.node, &mut todo);
 
         let mut nodes = Vec::new();
 
@@ -278,7 +278,7 @@ impl<'a, 'k, 'nav: 'node, 'node> Node<'a, 'k, 'nav, 'node> {
                 .cloned()
         }
 
-        let mut todo = children(&self.node).collect::<VecDeque<_>>();
+        let mut todo = children(self.node).collect::<VecDeque<_>>();
 
         let mut nodes = Vec::new();
 
