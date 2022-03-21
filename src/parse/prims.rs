@@ -3,7 +3,7 @@ use super::*;
 fn from_str<'a, T: FromStr, E: CxErr<'a>>(i: &'a str) -> IResult<&'a str, T, E> {
     i.parse::<T>()
         .map(|x| ("", x))
-        .map_err(|_| Err::Error(error::make_error(i, ErrorKind::ParseTo)))
+        .map_err(|_| Err::Error(error::make_error(i, ErrorKind::Fail)))
 }
 
 /// A unit value (`()`). Note can have inline whitespace.
