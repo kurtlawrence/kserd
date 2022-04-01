@@ -636,3 +636,35 @@ fn some_struct_decode_test_2() {
     let y = y.decode::<SomeStruct>().unwrap();
     assert_eq!(s, y);
 }
+
+// ###### OTHER ################################################################
+#[test]
+fn structs_encode_as_containers() {
+    #[derive(Serialize)]
+    struct S {
+        a: u8,
+        b: String,
+    }
+
+    let s = S {
+        a: 0,
+        b: "hello".to_string(),
+    };
+
+    let kserd = Kserd::enc(&s).unwrap();
+
+    let cntr = kserd.cntr().expect("should be a container");
+    assert_eq!(cntr.get_num("a"), Some(0.into()));
+    assert_eq!(cntr.get_str("b"), Some("hello".into()));
+
+    let v = vec![s];
+
+    let kserd = Kserd::enc(&v).unwrap();
+
+    let seq = kserd.seq().unwrap();
+    let x = seq.get(0).unwrap();
+
+    let cntr = x.cntr().expect("should be a container");
+    assert_eq!(cntr.get_num("a"), Some(0.into()));
+    assert_eq!(cntr.get_str("b"), Some("hello".into()));
+}
